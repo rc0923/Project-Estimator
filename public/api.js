@@ -1,4 +1,4 @@
-// api.js — Radiant Spaces API client
+// api.js — Radiant Toolkit API client
 // All communication with the backend goes through these functions.
 // Both HTML pages load this as a <script src="api.js">.
 

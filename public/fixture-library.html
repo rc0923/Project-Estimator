@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Radiant Spaces — Fixture Library</title>
+  <title>Radiant Toolkit — Fixture Library</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -11,7 +11,7 @@
 
   <!-- ── HEADER ─────────────────────────────────────────────────────────── -->
   <header>
-    <div class="logo"><span>Radiant</span> Spaces</div>
+    <div class="logo"><span>Radiant</span> Toolkit</div>
     <div class="header-divider"></div>
     <a href="/"                    class="nav-link">Estimator</a>
     <a href="/fixture-library.html" class="nav-link active">Fixture Library</a>
@@ -29,10 +29,15 @@
       <div class="search-wrap">
         <input type="text" id="search" placeholder="Search by name, model, or brand..." oninput="renderGrid()" />
       </div>
-      <select class="filter-select" id="type-filter"  onchange="renderGrid()"><option value="">All types</option></select>
       <select class="filter-select" id="brand-filter" onchange="renderGrid()"><option value="">All brands</option></select>
-      <button class="add-btn" onclick="openModal()">+ Add fixture</button>
+      <button class="add-btn" onclick="openModal(null, 'fixture')">+ Add fixture</button>
+      <button class="add-btn" onclick="openModal(null, 'wire')">+ Add wire</button>
+      <button class="add-btn" onclick="openModal(null, 'lamp')">+ Add lamp</button>
+      <button class="add-btn" onclick="openModal(null, 'transformer')">+ Add transformer</button>
+      <button class="add-btn" onclick="openModal(null, 'misc')">+ Add misc</button>
     </div>
+
+    <div class="lib-tabs" id="lib-tabs"></div>
 
     <div class="count-label" id="count-label"></div>
     <div class="fixture-grid" id="fixture-grid">
@@ -78,18 +83,15 @@
               <option>Wall Wash</option>
               <option>Hardscape</option>
               <option>Transformer</option>
+              <option>Wire</option>
+              <option>Lamp</option>
+              <option>Misc</option>
               <option>Other</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label">My cost ($) *</label>
             <input class="form-input mono" id="f-cost" type="number" min="0" step="0.01" placeholder="0.00" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label">Typical wire run (ft)</label>
-            <input class="form-input mono" id="f-wire" type="number" min="0" placeholder="optional default" />
           </div>
         </div>
         <label class="form-check">
@@ -135,6 +137,7 @@
 
   let editingId   = null;
   let allFixtures = [];
+  let activeTab   = '';
 
 
   /* ── UTILITIES ──────────────────────────────────────────────────────── */
@@ -156,27 +159,33 @@
 
   /* ── GRID RENDER ────────────────────────────────────────────────────── */
 
+  function setTab(t) { activeTab = t; renderGrid(); }
+
   function renderGrid() {
     const q      = document.getElementById('search').value.toLowerCase();
-    const typeF  = document.getElementById('type-filter').value;
     const brandF = document.getElementById('brand-filter').value;
 
-    const types  = [...new Set(allFixtures.map(f => f.type).filter(Boolean))].sort();
-    const brands = [...new Set(allFixtures.map(f => f.brand).filter(Boolean))].sort();
-    const typeEl  = document.getElementById('type-filter');
+    // Build tab bar from types present in library
+    const types   = [...new Set(allFixtures.map(f => f.type).filter(Boolean))].sort();
+    const tabsEl  = document.getElementById('lib-tabs');
+    tabsEl.innerHTML = ['', ...types].map(t =>
+      `<button class="lib-tab${activeTab === t ? ' active' : ''}" onclick="setTab('${t}')">${t || 'All'}</button>`
+    ).join('');
+
+    // Repopulate brand filter preserving selection
+    const brands  = [...new Set(allFixtures.map(f => f.brand).filter(Boolean))].sort();
     const brandEl = document.getElementById('brand-filter');
-    typeEl.innerHTML  = '<option value="">All types</option>'  + types.map(t  => `<option ${t  === typeF  ? 'selected' : ''}>${t}</option>`).join('');
-    brandEl.innerHTML = '<option value="">All brands</option>' + brands.map(b => `<option ${b  === brandF ? 'selected' : ''}>${b}</option>`).join('');
+    brandEl.innerHTML = '<option value="">All brands</option>' + brands.map(b => `<option ${b === brandF ? 'selected' : ''}>${b}</option>`).join('');
 
     const filtered = allFixtures.filter(f => {
-      const matchQ = !q     || [f.name, f.model, f.brand, f.notes].join(' ').toLowerCase().includes(q);
-      const matchT = !typeF  || f.type  === typeF;
-      const matchB = !brandF || f.brand === brandF;
+      const matchQ = !q        || [f.name, f.model, f.brand, f.notes].join(' ').toLowerCase().includes(q);
+      const matchT = !activeTab || f.type === activeTab;
+      const matchB = !brandF   || f.brand === brandF;
       return matchQ && matchT && matchB;
     });
 
     document.getElementById('count-label').textContent =
-      `${filtered.length} fixture${filtered.length !== 1 ? 's' : ''}` +
+      `${filtered.length} item${filtered.length !== 1 ? 's' : ''}` +
       (allFixtures.length !== filtered.length ? ` (${allFixtures.length} total)` : '');
 
     const grid = document.getElementById('fixture-grid');
@@ -197,7 +206,7 @@
             <div class="fc-name">${esc(f.name)}</div>
             <div class="fc-model">${esc(f.brand || '')}${f.brand && f.model ? ' · ' : ''}${esc(f.model || '')}</div>
           </div>
-          <div class="fc-type-badge">${esc(f.type || 'Other')}</div>
+          ${!activeTab ? `<div class="fc-type-badge">${esc(f.type || 'Other')}</div>` : ''}
         </div>
         <div class="fc-meta">
           <div class="fc-stat"><div class="fc-stat-label">My cost</div><div class="fc-stat-val">${f.cost ? '$' + parseFloat(f.cost).toFixed(2) : '—'}</div></div>
@@ -223,7 +232,7 @@
     document.getElementById('integrated-fields').style.display = on ? '' : 'none';
   }
 
-  function openModal(id = null) {
+  function openModal(id = null, presetCategory = null) {
     editingId = id;
     showError('');
 
@@ -236,17 +245,19 @@
       document.getElementById('f-model').value              = f.model   || '';
       document.getElementById('f-type').value               = f.type    || 'Uplight';
       document.getElementById('f-cost').value               = f.cost    ?? '';
-      document.getElementById('f-wire').value               = f.wire_ft ?? '';
       document.getElementById('f-notes').value              = f.notes   || '';
       document.getElementById('f-integrated').checked       = !!f.integrated;
       document.getElementById('f-watts').value              = f.watts   ?? '';
       document.getElementById('f-cct').value                = f.cct     || '';
       document.getElementById('f-beam').value               = f.beam    || '';
     } else {
-      document.getElementById('modal-title').textContent = 'Add fixture';
-      ['f-name','f-brand','f-model','f-cost','f-wire','f-notes','f-watts','f-cct','f-beam']
+      const typeMap = { fixture: 'Uplight', wire: 'Wire', lamp: 'Lamp', transformer: 'Transformer', misc: 'Misc' };
+      const defaultType = typeMap[presetCategory] || 'Uplight';
+      const titleMap = { wire: 'Add wire', lamp: 'Add lamp', transformer: 'Add transformer', misc: 'Add misc material' };
+      document.getElementById('modal-title').textContent = titleMap[presetCategory] || 'Add fixture';
+      ['f-name','f-brand','f-model','f-cost','f-notes','f-watts','f-cct','f-beam']
         .forEach(id => { document.getElementById(id).value = ''; });
-      document.getElementById('f-type').value       = 'Uplight';
+      document.getElementById('f-type').value         = defaultType;
       document.getElementById('f-integrated').checked = false;
     }
 
@@ -275,7 +286,6 @@
       model:      document.getElementById('f-model').value.trim()  || null,
       type:       document.getElementById('f-type').value,
       cost:       parseFloat(document.getElementById('f-cost').value)  || null,
-      wire_ft:    parseFloat(document.getElementById('f-wire').value)  || null,
       notes:      document.getElementById('f-notes').value.trim()  || null,
       integrated,
       watts:      integrated ? (parseFloat(document.getElementById('f-watts').value) || null) : null,

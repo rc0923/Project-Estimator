@@ -1,7 +1,7 @@
 {
   "name": "radiant-spaces-estimator",
   "version": "1.0.0",
-  "description": "Radiant Spaces job estimator — local server",
+  "description": "Radiant Toolkit job estimator — local server",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

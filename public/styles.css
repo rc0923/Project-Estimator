@@ -199,16 +199,24 @@ td {
 tr:last-child td { border-bottom: none; }
 tr:hover td      { background: var(--surface2); }
 
-/* Column widths — fixture table */
-.col-model { width: 26%; }
-.col-type  { width: 13%; }
-.col-qty   { width: 7%;  }
-.col-watts { width: 9%;  }
-.col-unit  { width: 10%; }
-.col-wire  { width: 9%;  }
-.col-cost  { width: 11%; }
-.col-lib   { width: 9%;  }
-.col-del   { width: 6%;  }
+/* Shared column widths — all estimator tables */
+.col-name  { width: 22%; }   /* fixture/item name */
+.col-brand { width: 18%; }   /* brand + model # */
+.col-type  { width: 10%; }
+.col-qty   { width: 8%;  }
+.col-watts { width: 8%;  }
+.col-unit  { width: 11%; }   /* unit cost */
+.col-total { width: 11%; }   /* line total */
+.col-va    { width: 12%; }   /* VA rating (transformers) */
+.col-rolls { width: 12%; }   /* qty rolls (wire) */
+.col-qty,
+.col-watts,
+.col-unit,
+.col-total,
+.col-va,
+.col-rolls { text-align: right; }
+.col-lib   { width: 40px; text-align: center; padding: 4px 4px; }
+.col-del   { width: 40px; text-align: center; padding: 4px 4px; }
 
 /* Inline table inputs */
 .tbl-input {
@@ -223,7 +231,7 @@ tr:hover td      { background: var(--surface2); }
   outline: none;
 }
 .tbl-input:focus          { border-color: var(--border2); background: var(--surface); }
-.tbl-input.mono           { font-family: var(--mono); font-size: 12px; }
+.tbl-input.mono           { font-family: var(--mono); font-size: 12px; text-align: right; }
 select.tbl-input          { cursor: pointer; }
 
 .row-total {
@@ -264,6 +272,28 @@ select.tbl-input          { cursor: pointer; }
   white-space: nowrap;
 }
 .lib-btn:hover { background: var(--accent-light); color: var(--accent); border-color: #b8d4bf; }
+
+.card-header-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.card-add-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text2);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.card-add-btn:hover { background: var(--accent-light); color: var(--accent); border-color: #b8d4bf; }
 
 .add-row-btn {
   display: flex;
@@ -310,6 +340,7 @@ select.tbl-input          { cursor: pointer; }
   background: var(--surface);
   border-left: 1px solid var(--border);
   overflow-y: auto;
+  min-height: 0;
   padding: 20px 16px;
   display: flex;
   flex-direction: column;
@@ -409,6 +440,7 @@ select.tbl-input          { cursor: pointer; }
   background: var(--surface);
   border-right: 1px solid var(--border);
   overflow-y: auto;
+  min-height: 0;
   padding: 16px 0;
 }
 
@@ -471,11 +503,66 @@ select.tbl-input          { cursor: pointer; }
 
 .main {
   overflow-y: auto;
+  min-height: 0;
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
+
+/* Client info card */
+.client-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+
+.client-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 14px 18px;
+}
+
+.client-col + .client-col {
+  border-left: 1px solid var(--border);
+}
+
+.client-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0;
+}
+
+.client-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.client-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-family: var(--sans);
+  color: var(--text);
+  outline: none;
+  width: 100%;
+}
+.client-input:focus        { border-color: var(--border2); background: var(--surface2); }
+.client-input::placeholder { color: var(--text3); }
+
+.client-address {
+  resize: none;
+  min-height: 62px;
+  line-height: 1.5;
+}
+
 
 /* Estimate name input (in header) */
 #estimate-name {
@@ -732,6 +819,28 @@ textarea.form-input        { resize: vertical; min-height: 72px; line-height: 1.
 }
 .add-btn:hover { background: var(--accent-mid); }
 
+.lib-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.lib-tab {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-family: var(--sans);
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.lib-tab:hover  { background: var(--surface2); border-color: var(--border2); }
+.lib-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
 .count-label {
   font-size: 12px;
   color: var(--text3);
@@ -952,14 +1061,53 @@ textarea.form-input        { resize: vertical; min-height: 72px; line-height: 1.
    ----------------------------------------------------------------------------- */
 
 @media print {
+  /* Hide interactive chrome */
   .panel-left,
-  .panel-right,
-  header button,
+  header,
   .add-row-btn,
+  .card-header-actions,
   .lib-btn,
   .del-btn { display: none !important; }
 
-  .app-shell { grid-template-columns: 0 1fr 0; }
-  .main      { overflow: visible; padding: 0; }
-  .card      { break-inside: avoid; }
+  /* Show summary panel inline after the cards */
+  .panel-right {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    margin-top: 16px;
+    padding: 16px !important;
+    min-height: 0 !important;
+  }
+
+  /* Tear down the fixed viewport layout so content flows freely */
+  html, body { height: auto !important; overflow: visible !important; }
+
+  .app-shell {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .main {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+
+  .card {
+    break-inside: avoid;
+    margin-bottom: 16px;
+    border: 1px solid #ccc;
+  }
+
+  /* Remove row-hover styles that don't print well */
+  .tbl-input {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
 }

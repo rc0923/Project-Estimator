@@ -66,6 +66,7 @@ db.exec(`
 // SQLite throws if the column already exists; we catch and ignore that.
 const migrations = [
   `ALTER TABLE fixtures ADD COLUMN integrated INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE estimate_fixtures ADD COLUMN brand_model TEXT`,
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch (_) { /* column already exists — skip */ }
@@ -132,9 +133,9 @@ const estimateQueries = {
 
   insertRow: db.prepare(`
     INSERT INTO estimate_fixtures
-      (estimate_id, sort_order, table_type, model, type, qty, watts, unit_cost, wire_ft, va_rating)
+      (estimate_id, sort_order, table_type, model, brand_model, type, qty, watts, unit_cost, wire_ft, va_rating)
     VALUES
-      (@estimate_id, @sort_order, @table_type, @model, @type, @qty, @watts, @unit_cost, @wire_ft, @va_rating)
+      (@estimate_id, @sort_order, @table_type, @model, @brand_model, @type, @qty, @watts, @unit_cost, @wire_ft, @va_rating)
   `),
 
   getRows: db.prepare(`
@@ -154,7 +155,7 @@ const saveEstimate = db.transaction((estimate) => {
     id:       estimate.id,
     name:     estimate.name     || '',
     notes:    estimate.notes    || '',
-    settings: JSON.stringify(estimate.settings || {}),
+    settings: JSON.stringify({ ...(estimate.settings || {}), client: estimate.client || {} }),
     saved_at: estimate.savedAt  || new Date().toISOString(),
   });
 
@@ -166,12 +167,61 @@ const saveEstimate = db.transaction((estimate) => {
       estimate_id: estimate.id,
       sort_order:  i,
       table_type:  'fixture',
-      model:       row.model     || null,
-      type:        row.type      || null,
+      model:       row.model       || null,
+      brand_model: row.brand_model || null,
+      type:        row.type        || null,
       qty:         parseInt(row.qty)          || null,
       watts:       parseFloat(row.watts)      || null,
       unit_cost:   parseFloat(row.unit_cost)  || null,
       wire_ft:     parseFloat(row.wire_ft)    || null,
+      va_rating:   null,
+    });
+  });
+
+  (estimate.wire || []).forEach((row, i) => {
+    estimateQueries.insertRow.run({
+      estimate_id: estimate.id,
+      sort_order:  i,
+      table_type:  'wire',
+      model:       row.model       || null,
+      brand_model: row.brand_model || null,
+      type:        null,
+      qty:         parseFloat(row.qty)         || null,
+      watts:       null,
+      unit_cost:   parseFloat(row.unit_cost)   || null,
+      wire_ft:     null,
+      va_rating:   null,
+    });
+  });
+
+  (estimate.lamps || []).forEach((row, i) => {
+    estimateQueries.insertRow.run({
+      estimate_id: estimate.id,
+      sort_order:  i,
+      table_type:  'lamp',
+      model:       row.model       || null,
+      brand_model: row.brand_model || null,
+      type:        null,
+      qty:         parseFloat(row.qty)        || null,
+      watts:       parseFloat(row.watts)      || null,
+      unit_cost:   parseFloat(row.unit_cost)  || null,
+      wire_ft:     null,
+      va_rating:   null,
+    });
+  });
+
+  (estimate.misc || []).forEach((row, i) => {
+    estimateQueries.insertRow.run({
+      estimate_id: estimate.id,
+      sort_order:  i,
+      table_type:  'misc',
+      model:       row.model       || null,
+      brand_model: row.brand_model || null,
+      type:        null,
+      qty:         parseFloat(row.qty)         || null,
+      watts:       null,
+      unit_cost:   parseFloat(row.unit_cost)   || null,
+      wire_ft:     null,
       va_rating:   null,
     });
   });
@@ -181,7 +231,8 @@ const saveEstimate = db.transaction((estimate) => {
       estimate_id: estimate.id,
       sort_order:  i,
       table_type:  'transformer',
-      model:       row.model     || null,
+      model:       row.model       || null,
+      brand_model: row.brand_model || null,
       type:        null,
       qty:         parseInt(row.qty)          || null,
       watts:       null,
@@ -201,6 +252,9 @@ function loadEstimate(id) {
     ...meta,
     settings:     JSON.parse(meta.settings || '{}'),
     fixtures:     rows.filter(r => r.table_type === 'fixture'),
+    wire:         rows.filter(r => r.table_type === 'wire'),
+    lamps:        rows.filter(r => r.table_type === 'lamp'),
+    misc:         rows.filter(r => r.table_type === 'misc'),
     transformers: rows.filter(r => r.table_type === 'transformer'),
   };
 }

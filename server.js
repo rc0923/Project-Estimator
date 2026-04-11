@@ -1,4 +1,4 @@
-// server.js — Radiant Spaces local estimator server
+// server.js — Radiant Toolkit local estimator server
 // Serves static frontend files and a JSON REST API backed by SQLite.
 //
 // API routes:
@@ -133,5 +133,5 @@ app.get('*', (req, res) => {
 
 // ── START ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Radiant Spaces running at http://localhost:${PORT}`);
+  console.log(`Radiant Toolkit running at http://localhost:${PORT}`);
 });

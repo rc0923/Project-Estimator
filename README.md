@@ -1,6 +1,6 @@
-# Radiant Spaces — Job Estimator
+# Radiant Toolkit — Job Estimator
 
-Local estimator and fixture library for Radiant Spaces landscape lighting.
+Local estimator and fixture library for making landscape lighting estimates.
 Runs as a Docker container on your VM. Data persists in a SQLite database
 mounted from the host filesystem.
 

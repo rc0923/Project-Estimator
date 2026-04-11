@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Radiant Spaces — Job Estimator</title>
+  <title>Radiant Toolkit — Job Estimator</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -12,13 +12,17 @@
 
   <!-- ── HEADER ─────────────────────────────────────────────────────────── -->
   <header>
-    <div class="logo"><span>Radiant</span> Spaces</div>
+    <div class="logo"><span>Radiant</span> Toolkit</div>
     <div class="header-divider"></div>
     <a href="/"                     class="nav-link active">Estimator</a>
     <a href="/fixture-library.html" class="nav-link">Fixture Library</a>
     <div class="header-sep"></div>
     <input id="estimate-name" type="text" placeholder="Client / estimate name..." />
+    <button class="hdr-btn"             onclick="showMaterialsList()">Materials List</button>
     <button class="hdr-btn"             onclick="printEstimate()">Print</button>
+    <button class="hdr-btn"             onclick="exportTxt()">Export TXT</button>
+    <button class="hdr-btn"             onclick="exportJson()">Export</button>
+    <label  class="hdr-btn"            style="cursor:pointer">Import<input type="file" accept=".json" style="display:none" onchange="importJson(event)"></label>
     <button class="hdr-btn danger-text" onclick="deleteCurrentEstimate()">Delete</button>
     <button class="hdr-btn save"        id="btn-save" onclick="saveCurrentEstimate()">Save</button>
   </header>
@@ -35,36 +39,137 @@
   <!-- ── MAIN CONTENT ───────────────────────────────────────────────────── -->
   <main class="main">
 
+    <!-- Client info -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Client</span></div>
+      <div class="client-fields">
+        <div class="client-col">
+          <div class="client-field">
+            <label class="client-label">Name</label>
+            <input class="client-input" id="client-name" type="text" placeholder="e.g. John Smith" />
+          </div>
+          <div class="client-field">
+            <label class="client-label">Phone</label>
+            <input class="client-input" id="client-phone" type="text" placeholder="e.g. (555) 867-5309" />
+          </div>
+          <div class="client-field">
+            <label class="client-label">Email</label>
+            <input class="client-input" id="client-email" type="text" placeholder="e.g. john@example.com" />
+          </div>
+        </div>
+        <div class="client-col">
+          <div class="client-field" style="flex:1">
+            <label class="client-label">Address</label>
+            <textarea class="client-input client-address" id="client-address" placeholder="Street&#10;City, State ZIP"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Fixture table -->
     <div class="card">
       <div class="card-header">
         <span class="card-title">Fixtures</span>
         <span id="fixture-count" style="font-size:11px;font-family:var(--mono);color:var(--text3)">0 items</span>
+        <div class="card-header-actions">
+          <button class="card-add-btn" onclick="addRow()">+ Add</button>
+          <button class="card-add-btn" onclick="openPicker('fixture')">◫ Library</button>
+        </div>
       </div>
       <table>
         <thead>
           <tr>
-            <th class="col-model">Model / Description</th>
+            <th class="col-name">Name</th>
+            <th class="col-brand">Model</th>
             <th class="col-type">Type</th>
             <th class="col-qty">Qty</th>
             <th class="col-watts">Watts</th>
             <th class="col-unit">Unit cost</th>
-            <th class="col-wire">Wire ft</th>
-            <th class="col-cost">Line total</th>
+            <th class="col-total">Line total</th>
             <th class="col-lib"></th>
             <th class="col-del"></th>
           </tr>
         </thead>
         <tbody id="fixture-tbody"></tbody>
       </table>
-      <div style="display:flex;border-top:1px solid var(--border)">
-        <button class="add-row-btn" style="flex:1" onclick="addRow()">
-          <span style="font-size:16px;line-height:1">+</span> Add row manually
-        </button>
-        <button class="add-row-btn" style="flex:1;border-left:1px solid var(--border)" onclick="openPicker('fixture')">
-          <span style="font-size:16px;line-height:1">◫</span> Pick from library
-        </button>
+    </div>
+
+    <!-- Wire table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Wire</span>
+        <span id="wire-count" style="font-size:11px;font-family:var(--mono);color:var(--text3)">0 runs</span>
+        <div class="card-header-actions">
+          <button class="card-add-btn" onclick="addWireRow()">+ Add</button>
+          <button class="card-add-btn" onclick="openPicker('wire')">◫ Library</button>
+        </div>
       </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-name">Name</th>
+            <th class="col-brand">Model</th>
+            <th class="col-rolls">Qty (Rolls)</th>
+            <th class="col-unit">Cost</th>
+            <th class="col-total">Line total</th>
+            <th class="col-lib"></th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="wire-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Lamps table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Lamps</span>
+        <span id="lamp-count" style="font-size:11px;font-family:var(--mono);color:var(--text3)">0 items</span>
+        <div class="card-header-actions">
+          <button class="card-add-btn" onclick="addLampRow()">+ Add</button>
+          <button class="card-add-btn" onclick="openPicker('lamp')">◫ Library</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-name">Name</th>
+            <th class="col-brand">Model</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-watts">Watts</th>
+            <th class="col-unit">Unit cost</th>
+            <th class="col-total">Line total</th>
+            <th class="col-lib"></th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="lamp-tbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Misc Materials table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Misc Materials</span>
+        <span id="misc-count" style="font-size:11px;font-family:var(--mono);color:var(--text3)">0 items</span>
+        <div class="card-header-actions">
+          <button class="card-add-btn" onclick="addMiscRow()">+ Add</button>
+          <button class="card-add-btn" onclick="openPicker('misc')">◫ Library</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-name">Description</th>
+            <th class="col-brand">Model #</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-unit">Unit cost</th>
+            <th class="col-total">Line total</th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="misc-tbody"></tbody>
+      </table>
     </div>
 
     <!-- Transformer table -->
@@ -72,29 +177,26 @@
       <div class="card-header">
         <span class="card-title">Transformers</span>
         <span id="xfmr-count" style="font-size:11px;font-family:var(--mono);color:var(--text3)">0 items</span>
+        <div class="card-header-actions">
+          <button class="card-add-btn" onclick="addXfmrRow()">+ Add</button>
+          <button class="card-add-btn" onclick="openPicker('transformer')">◫ Library</button>
+        </div>
       </div>
       <table>
         <thead>
           <tr>
-            <th class="col-model">Model / Description</th>
-            <th style="width:13%">VA Rating</th>
+            <th class="col-name">Name</th>
+            <th class="col-brand">Model</th>
+            <th class="col-va">VA Rating</th>
             <th class="col-qty">Qty</th>
-            <th style="width:10%">Unit cost</th>
-            <th style="width:11%">Line total</th>
+            <th class="col-unit">Unit cost</th>
+            <th class="col-total">Line total</th>
             <th class="col-lib"></th>
             <th class="col-del"></th>
           </tr>
         </thead>
         <tbody id="xfmr-tbody"></tbody>
       </table>
-      <div style="display:flex;border-top:1px solid var(--border)">
-        <button class="add-row-btn" style="flex:1" onclick="addXfmrRow()">
-          <span style="font-size:16px;line-height:1">+</span> Add row manually
-        </button>
-        <button class="add-row-btn" style="flex:1;border-left:1px solid var(--border)" onclick="openPicker('transformer')">
-          <span style="font-size:16px;line-height:1">◫</span> Pick from library
-        </button>
-      </div>
     </div>
 
     <!-- Notes -->
@@ -109,11 +211,11 @@
   <aside class="panel-right">
     <div class="summary-section">
       <div class="summary-label">Settings</div>
-      <div class="setting-row"><label>Hourly rate ($)</label>      <input class="setting-input" id="hourly-rate" type="number" value="95"   min="0" step="5"    /></div>
-      <div class="setting-row"><label>Labor hours</label>          <input class="setting-input" id="labor-hrs"  type="number" value="2"    min="0" step="0.5"  /></div>
-      <div class="setting-row"><label>Wire cost ($/ft)</label>     <input class="setting-input" id="wire-cost"  type="number" value="0.35" min="0" step="0.05" /></div>
-      <div class="setting-row"><label>Materials markup %</label>   <input class="setting-input" id="markup"     type="number" value="30"   min="0" step="5"    /></div>
-      <div class="setting-row"><label>NYS Sales tax %</label>      <input class="setting-input" id="sales-tax"  type="number" value="8.75" min="0" step="0.25" /></div>
+      <div class="setting-row"><label>Hourly rate ($)</label>    <input class="setting-input" id="hourly-rate" type="number" value="110"  min="0" step="5"    /></div>
+      <div class="setting-row"><label>Labor hours</label>        <input class="setting-input" id="labor-hrs"  type="number" value="2"    min="0" step="0.5"  /></div>
+      <div class="setting-row"><label>Materials markup %</label> <input class="setting-input" id="markup"     type="number" value="50"   min="0" step="5"    /></div>
+      <div class="setting-row"><label>NYS Sales tax %</label>    <input class="setting-input" id="sales-tax"  type="number" value="8.75" min="0" step="0.25" /></div>
+      <div class="setting-row"><label>Subcontractor %</label>    <input class="setting-input" id="sub-pct"    type="number" value="0"    min="0" step="1"    /></div>
     </div>
     <div class="divider"></div>
     <div class="summary-section">
@@ -129,15 +231,6 @@
         <div class="stat-block-sub"  id="xfmr-headroom"></div>
       </div>
       <div id="xfmr-warning" class="xfmr-warning">⚠ Load exceeds transformer capacity</div>
-    </div>
-    <div class="divider"></div>
-    <div class="summary-section">
-      <div class="summary-label">Wire</div>
-      <div class="stat-block">
-        <div class="stat-block-label">Total wire run</div>
-        <div class="stat-block-val"  id="total-wire">0 ft</div>
-        <div class="stat-block-sub"  id="wire-cost-sub">—</div>
-      </div>
     </div>
     <div class="divider"></div>
     <div class="summary-section">
@@ -157,6 +250,10 @@
           <span>Labor (billed)</span><span class="val" id="labor-cost">$0</span>
         </div>
       </div>
+      <div id="sub-pct-block" style="display:none;height:6px"></div>
+      <div id="sub-pct-line" style="display:none;flex-direction:column;gap:6px">
+        <div class="total-line"><span id="sub-pct-label">Subcontractor (0%)</span><span class="val" id="sub-pct-amt">$0</span></div>
+      </div>
     </div>
     <div class="divider"></div>
     <div class="stat-block accent">
@@ -167,6 +264,18 @@
     <div class="markup-note" id="margin-note"></div>
   </aside>
 
+</div>
+
+<!-- ── MATERIALS LIST MODAL ──────────────────────────────────────────── -->
+<div class="modal-backdrop" id="materials-modal" onclick="if(event.target===this)closeMaterialsList()">
+  <div class="modal" style="max-width:580px;max-height:80vh;display:flex;flex-direction:column;">
+    <div class="modal-header">
+      <span class="modal-title">Materials List</span>
+      <button class="hdr-btn" onclick="copyMaterialsList()" style="font-size:12px;padding:4px 10px">Copy</button>
+      <button class="modal-close" onclick="closeMaterialsList()">✕</button>
+    </div>
+    <div id="materials-body" style="overflow-y:auto;padding:20px;font-family:var(--mono);font-size:13px;line-height:1.8;white-space:pre-wrap;"></div>
+  </div>
 </div>
 
 <!-- ── LIBRARY PICKER MODAL ───────────────────────────────────────────── -->
@@ -211,11 +320,47 @@
   function fmt$(n)         { return '$' + Math.round(n).toLocaleString(); }
   function fmtD(n, d = 0)  { return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }); }
 
-  function setSaveState(busy) {
+  function setSaveState(busy, label) {
     const btn = document.getElementById('btn-save');
     btn.disabled    = busy;
-    btn.textContent = busy ? 'Saving...' : 'Save';
+    btn.textContent = label || (busy ? 'Saving...' : 'Save');
   }
+
+  let _autoSaveTimer  = null;
+  let _suppressSave   = false;
+
+  function flushSave() {
+    // Fire-and-forget save using keepalive so it survives page navigation
+    if (_suppressSave || !currentId) return;
+    const state   = getState();
+    state.savedAt = new Date().toISOString();
+    fetch(`/api/estimates/${currentId}`, {
+      method:    'PUT',
+      headers:   { 'Content-Type': 'application/json' },
+      body:      JSON.stringify(state),
+      keepalive: true,
+    });
+  }
+
+  function scheduleAutoSave() {
+    if (_suppressSave) return;
+    clearTimeout(_autoSaveTimer);
+    _autoSaveTimer = setTimeout(async () => {
+      if (!currentId) currentId = uid();
+      const state   = getState();
+      state.savedAt = new Date().toISOString();
+      try {
+        await API.saveEstimate(currentId, state);
+        allEstimates = await API.getEstimates();
+        renderEstimateList();
+      } catch (err) { console.error('Auto-save failed:', err); }
+    }, 500);
+  }
+
+  window.addEventListener('beforeunload', () => {
+    clearTimeout(_autoSaveTimer);
+    flushSave();
+  });
 
 
   /* ── PICKER ─────────────────────────────────────────────────────────── */
@@ -254,6 +399,9 @@
 
     let items = lib;
     if (pickerTarget === 'transformer') items = items.filter(f => f.type === 'Transformer');
+    if (pickerTarget === 'wire')        items = items.filter(f => f.type === 'Wire');
+    if (pickerTarget === 'lamp')        items = items.filter(f => f.type === 'Lamp');
+    if (pickerTarget === 'misc')        items = items.filter(f => f.type === 'Misc');
     if (pickerTypeFilter)               items = items.filter(f => f.type === pickerTypeFilter);
     if (q) items = items.filter(f => [f.name, f.brand, f.model, f.notes].join(' ').toLowerCase().includes(q));
 
@@ -286,29 +434,50 @@
   function pickFixture(id) {
     const f = libraryFixtures.find(x => x.id === id);
     if (!f) return;
-    const label = [f.brand, f.model].filter(Boolean).join(' ') || f.name;
+    const label      = f.name || [f.brand, f.model].filter(Boolean).join(' ');
+    const brandModel = [f.brand, f.model].filter(Boolean).join(' ');
 
     if (_replaceMode && _replaceTargetRow) {
       const tr       = _replaceTargetRow;
       const setField = (field, val) => { const el = tr.querySelector(`[data-field=${field}]`); if (el) el.value = val; };
-      setField('model', label);
+      setField('model',       label);
+      setField('brand_model', brandModel);
       if (pickerTarget === 'fixture') {
-        if (f.type)    setField('type',      f.type);
-        if (f.watts)   setField('watts',     f.watts);
-        if (f.cost)    setField('unit_cost', f.cost);
-        if (f.wire_ft) setField('wire_ft',   f.wire_ft);
+        if (f.type)  setField('type',      f.type);
+        if (f.watts) setField('watts',     f.watts);
+        if (f.cost)  setField('unit_cost', f.cost);
+      } else if (pickerTarget === 'wire') {
+        if (f.cost) setField('unit_cost', f.cost);
+      } else if (pickerTarget === 'misc') {
+        if (f.cost) setField('unit_cost',   f.cost);
+        setField('brand_model', brandModel);
+      } else if (pickerTarget === 'lamp') {
+        if (f.watts) setField('watts',     f.watts);
+        if (f.cost)  setField('unit_cost', f.cost);
       } else {
-        if (f.watts) setField('va_rating',  f.watts);
-        if (f.cost)  setField('unit_cost',  f.cost);
+        if (f.watts) setField('va_rating', f.watts);
+        if (f.cost)  setField('unit_cost', f.cost);
       }
     } else {
       if (pickerTarget === 'transformer') {
         document.getElementById('xfmr-tbody').appendChild(
-          makeXfmrRow({ model: label, va_rating: f.watts || '', unit_cost: f.cost || '', qty: 1 })
+          makeXfmrRow({ model: label, brand_model: brandModel, va_rating: f.watts || '', unit_cost: f.cost || '', qty: 1 })
+        );
+      } else if (pickerTarget === 'wire') {
+        document.getElementById('wire-tbody').appendChild(
+          makeWireRow({ model: label, brand_model: brandModel, unit_cost: f.cost || '' })
+        );
+      } else if (pickerTarget === 'lamp') {
+        document.getElementById('lamp-tbody').appendChild(
+          makeLampRow({ model: label, brand_model: brandModel, watts: f.watts || '', unit_cost: f.cost || '' })
+        );
+      } else if (pickerTarget === 'misc') {
+        document.getElementById('misc-tbody').appendChild(
+          makeMiscRow({ model: label, brand_model: brandModel, unit_cost: f.cost || '' })
         );
       } else {
         document.getElementById('fixture-tbody').appendChild(
-          makeFixtureRow({ model: label, type: f.type || 'Uplight', qty: 1, watts: f.watts || '', unit_cost: f.cost || '', wire_ft: f.wire_ft || '' })
+          makeFixtureRow({ model: label, brand_model: brandModel, type: f.type || 'Uplight', qty: 1, watts: f.watts || '', unit_cost: f.cost || '' })
         );
       }
     }
@@ -333,14 +502,56 @@
   function makeFixtureRow(data = {}) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="tbl-input"      data-field="model"     placeholder="Model / description"      value="${esc(data.model     || '')}" oninput="recalc()" /></td>
-      <td><select class="tbl-input"     data-field="type"      onchange="recalc()">${FIXTURE_TYPES.map(t => `<option ${data.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+      <td><input class="tbl-input"      data-field="model"       placeholder="Name"             value="${esc(data.model       || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input"      data-field="brand_model" placeholder="Brand / model"    value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td><select class="tbl-input"     data-field="type"        onchange="recalc()">${FIXTURE_TYPES.map(t => `<option ${data.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
       <td><input class="tbl-input mono" data-field="qty"       type="number" min="0"             value="${data.qty        || 1}"  oninput="recalc()" /></td>
       <td><input class="tbl-input mono" data-field="watts"     type="number" min="0" step="0.5"  value="${data.watts      || ''}" placeholder="—"    oninput="recalc()" /></td>
       <td><input class="tbl-input mono" data-field="unit_cost" type="number" min="0" step="0.01" value="${data.unit_cost  || ''}" placeholder="—"    oninput="recalc()" /></td>
-      <td><input class="tbl-input mono" data-field="wire_ft"   type="number" min="0"             value="${data.wire_ft    || ''}" placeholder="—"    oninput="recalc()" /></td>
       <td class="row-total">—</td>
       <td><button class="lib-btn" title="Replace from library" onclick="replaceFromLib(this, 'fixture')">lib</button></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    `;
+    return tr;
+  }
+
+  function makeWireRow(data = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="tbl-input"      data-field="model"       placeholder="Name"             value="${esc(data.model       || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input"      data-field="brand_model" placeholder="Brand / model"    value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="qty"         type="number" min="0"           value="${data.qty        || ''}" placeholder="—"    oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="unit_cost" type="number" min="0" step="0.01" value="${data.unit_cost  || ''}" placeholder="—"    oninput="recalc()" /></td>
+      <td class="row-total">—</td>
+      <td><button class="lib-btn" title="Replace from library" onclick="replaceFromLib(this, 'wire')">lib</button></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    `;
+    return tr;
+  }
+
+  function makeLampRow(data = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="tbl-input"      data-field="model"       placeholder="Name"          value="${esc(data.model       || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input"      data-field="brand_model" placeholder="Brand / model" value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="qty"         type="number" min="0"        value="${data.qty      || ''}" placeholder="—"    oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="watts"       type="number" min="0" step="0.5" value="${data.watts || ''}" placeholder="—"   oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="unit_cost"   type="number" min="0" step="0.01" value="${data.unit_cost || ''}" placeholder="—" oninput="recalc()" /></td>
+      <td class="row-total">—</td>
+      <td><button class="lib-btn" title="Replace from library" onclick="replaceFromLib(this, 'lamp')">lib</button></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    `;
+    return tr;
+  }
+
+  function makeMiscRow(data = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="tbl-input"      data-field="model"       placeholder="Description"   value="${esc(data.model       || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input"      data-field="brand_model" placeholder="Model #"        value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="qty"         type="number" min="0"         value="${data.qty      || ''}" placeholder="—" oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="unit_cost"   type="number" min="0" step="0.01" value="${data.unit_cost || ''}" placeholder="—" oninput="recalc()" /></td>
+      <td class="row-total">—</td>
       <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
     `;
     return tr;
@@ -349,8 +560,9 @@
   function makeXfmrRow(data = {}) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td><input class="tbl-input"      data-field="model"     placeholder="Model / description"        value="${esc(data.model     || '')}" oninput="recalc()" /></td>
-      <td><input class="tbl-input mono" data-field="va_rating" type="number" min="0" step="50"          value="${data.va_rating  || ''}" placeholder="VA"  oninput="recalc()" /></td>
+      <td><input class="tbl-input"      data-field="model"       placeholder="Name"             value="${esc(data.model       || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input"      data-field="brand_model" placeholder="Brand / model"    value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="va_rating"   type="number" min="0" step="50" value="${data.va_rating  || ''}" placeholder="VA"  oninput="recalc()" /></td>
       <td><input class="tbl-input mono" data-field="qty"       type="number" min="0"                    value="${data.qty        || 1}"                        oninput="recalc()" /></td>
       <td><input class="tbl-input mono" data-field="unit_cost" type="number" min="0" step="0.01"        value="${data.unit_cost  || ''}" placeholder="—"       oninput="recalc()" /></td>
       <td class="row-total">—</td>
@@ -361,6 +573,9 @@
   }
 
   function addRow()     { document.getElementById('fixture-tbody').appendChild(makeFixtureRow()); recalc(); }
+  function addWireRow() { document.getElementById('wire-tbody').appendChild(makeWireRow());       recalc(); }
+  function addLampRow() { document.getElementById('lamp-tbody').appendChild(makeLampRow());       recalc(); }
+  function addMiscRow() { document.getElementById('misc-tbody').appendChild(makeMiscRow());       recalc(); }
   function addXfmrRow() { document.getElementById('xfmr-tbody').appendChild(makeXfmrRow());      recalc(); }
   function delRow(btn)  { btn.closest('tr').remove(); recalc(); }
 
@@ -370,21 +585,51 @@
   function recalc() {
     const rate     = parseFloat(document.getElementById('hourly-rate').value) || 0;
     const laborHrs = parseFloat(document.getElementById('labor-hrs').value)   || 0;
-    const wc       = parseFloat(document.getElementById('wire-cost').value)   || 0;
     const mkup     = parseFloat(document.getElementById('markup').value)      || 0;
     const taxPct   = parseFloat(document.getElementById('sales-tax').value)   || 0;
+    const subPct   = parseFloat(document.getElementById('sub-pct').value)     || 0;
 
-    let matCost = 0, totalWatts = 0, totalWire = 0, fixtureCount = 0;
+    let matCost = 0, totalWatts = 0, fixtureCount = 0;
 
     document.getElementById('fixture-tbody').querySelectorAll('tr').forEach(tr => {
       const qty = parseInt(tr.querySelector('[data-field=qty]')?.value)         || 0;
       const w   = parseFloat(tr.querySelector('[data-field=watts]')?.value)     || 0;
       const uc  = parseFloat(tr.querySelector('[data-field=unit_cost]')?.value) || 0;
-      const wft = parseFloat(tr.querySelector('[data-field=wire_ft]')?.value)   || 0;
       const lt  = qty * uc;
       const rtCell = tr.querySelector('.row-total');
       if (rtCell) rtCell.textContent = lt > 0 ? fmt$(lt) : '—';
-      matCost += lt; totalWatts += qty * w; totalWire += qty * wft; fixtureCount += qty;
+      matCost += lt; totalWatts += qty * w; fixtureCount += qty;
+    });
+
+    let wireCount = 0;
+    document.getElementById('wire-tbody').querySelectorAll('tr').forEach(tr => {
+      const qty = parseFloat(tr.querySelector('[data-field=qty]')?.value)       || 0;
+      const uc  = parseFloat(tr.querySelector('[data-field=unit_cost]')?.value) || 0;
+      const lt  = qty * uc;
+      const rtCell = tr.querySelector('.row-total');
+      if (rtCell) rtCell.textContent = lt > 0 ? fmt$(lt) : '—';
+      matCost += lt; wireCount++;
+    });
+
+    let lampCount = 0;
+    document.getElementById('lamp-tbody').querySelectorAll('tr').forEach(tr => {
+      const qty = parseFloat(tr.querySelector('[data-field=qty]')?.value)       || 0;
+      const w   = parseFloat(tr.querySelector('[data-field=watts]')?.value)     || 0;
+      const uc  = parseFloat(tr.querySelector('[data-field=unit_cost]')?.value) || 0;
+      const lt  = qty * uc;
+      const rtCell = tr.querySelector('.row-total');
+      if (rtCell) rtCell.textContent = lt > 0 ? fmt$(lt) : '—';
+      matCost += lt; totalWatts += qty * w; lampCount++;
+    });
+
+    let miscCount = 0;
+    document.getElementById('misc-tbody').querySelectorAll('tr').forEach(tr => {
+      const qty = parseFloat(tr.querySelector('[data-field=qty]')?.value)       || 0;
+      const uc  = parseFloat(tr.querySelector('[data-field=unit_cost]')?.value) || 0;
+      const lt  = qty * uc;
+      const rtCell = tr.querySelector('.row-total');
+      if (rtCell) rtCell.textContent = lt > 0 ? fmt$(lt) : '—';
+      matCost += lt; miscCount++;
     });
 
     let xfmrCap = 0;
@@ -398,16 +643,22 @@
       matCost += lt; xfmrCap += qty * va;
     });
 
-    const wireCostTotal  = totalWire * wc;
-    matCost             += wireCostTotal;
-    const markupAmt      = matCost * (mkup / 100);
-    const matBilled      = matCost + markupAmt;
-    const salesTaxAmt    = matBilled * (taxPct / 100);
-    const laborBilled    = laborHrs * rate;
-    const grandTotal     = matBilled + salesTaxAmt + laborBilled;
+    const markupAmt   = matCost * (mkup / 100);
+    const matBilled   = matCost + markupAmt;
+    const salesTaxAmt = matCost * (taxPct / 100);
+    const laborBilled = laborHrs * rate;
+    const subtotal    = matBilled + salesTaxAmt + laborBilled;
+    const subAmt      = subtotal * (subPct / 100);
+    const grandTotal  = subtotal + subAmt;
 
     document.getElementById('fixture-count').textContent =
       fixtureCount + ' fixture' + (fixtureCount !== 1 ? 's' : '');
+    document.getElementById('wire-count').textContent =
+      wireCount + ' roll' + (wireCount !== 1 ? 's' : '');
+    document.getElementById('lamp-count').textContent =
+      lampCount + ' item' + (lampCount !== 1 ? 's' : '');
+    document.getElementById('misc-count').textContent =
+      miscCount + ' item' + (miscCount !== 1 ? 's' : '');
     document.getElementById('xfmr-count').textContent =
       document.getElementById('xfmr-tbody').querySelectorAll('tr').length + ' unit(s)';
 
@@ -434,9 +685,6 @@
       document.getElementById('load-block').classList.remove('accent', 'warn');
     }
 
-    document.getElementById('total-wire').textContent    = fmtD(totalWire, 0) + ' ft';
-    document.getElementById('wire-cost-sub').textContent = wireCostTotal > 0
-      ? fmt$(wireCostTotal) + ' material cost' : '—';
     document.getElementById('mat-cost').textContent      = fmt$(matCost);
     document.getElementById('markup-label').textContent  = `Markup (${mkup}%)`;
     document.getElementById('mat-markup').textContent    = fmt$(markupAmt);
@@ -445,12 +693,21 @@
     document.getElementById('sales-tax-amt').textContent = fmt$(salesTaxAmt);
     document.getElementById('labor-hrs-display').textContent = fmtD(laborHrs, 1) + ' hrs';
     document.getElementById('labor-cost').textContent    = fmt$(laborBilled);
+
+    const showSub = subPct > 0;
+    document.getElementById('sub-pct-block').style.display = showSub ? '' : 'none';
+    document.getElementById('sub-pct-line').style.display  = showSub ? 'flex' : 'none';
+    document.getElementById('sub-pct-label').textContent   = `Subcontractor (${subPct}%)`;
+    document.getElementById('sub-pct-amt').textContent     = fmt$(subAmt);
+
     document.getElementById('grand-total').textContent   = fmt$(grandTotal);
     document.getElementById('per-fixture-cost').textContent = fixtureCount > 0
       ? `${fmt$(grandTotal / fixtureCount)} per fixture avg` : '—';
     const margin = grandTotal > 0 ? ((grandTotal - matCost) / grandTotal * 100) : 0;
     document.getElementById('margin-note').textContent =
       `Gross margin: ${fmtD(margin, 1)}%  ·  Labor: ${fmtD(laborHrs, 1)} hrs`;
+
+    scheduleAutoSave();
   }
 
 
@@ -461,14 +718,23 @@
       id:    currentId,
       name:  document.getElementById('estimate-name').value,
       notes: document.getElementById('notes').value,
+      client: {
+        name:    document.getElementById('client-name').value,
+        phone:   document.getElementById('client-phone').value,
+        email:   document.getElementById('client-email').value,
+        address: document.getElementById('client-address').value,
+      },
       settings: {
         hourlyRate: parseFloat(document.getElementById('hourly-rate').value) || 0,
         laborHrs:   parseFloat(document.getElementById('labor-hrs').value)   || 0,
-        wireCost:   parseFloat(document.getElementById('wire-cost').value)   || 0,
         markup:     parseFloat(document.getElementById('markup').value)      || 0,
         salesTax:   parseFloat(document.getElementById('sales-tax').value)   || 0,
+        subPct:     parseFloat(document.getElementById('sub-pct').value)     || 0,
       },
       fixtures:     getRowData('fixture-tbody'),
+      wire:         getRowData('wire-tbody'),
+      lamps:        getRowData('lamp-tbody'),
+      misc:         getRowData('misc-tbody'),
       transformers: getRowData('xfmr-tbody'),
     };
   }
@@ -501,6 +767,7 @@
   }
 
   async function loadEstimate(id) {
+    _suppressSave = true;
     try {
       const est = await API.getEstimate(id);
       currentId = id;
@@ -508,15 +775,27 @@
       document.getElementById('estimate-name').value = est.name  || '';
       document.getElementById('notes').value         = est.notes || '';
 
+      const c = est.client || est.settings?.client || {};
+      document.getElementById('client-name').value    = c.name    || '';
+      document.getElementById('client-phone').value   = c.phone   || '';
+      document.getElementById('client-email').value   = c.email   || '';
+      document.getElementById('client-address').value = c.address || '';
+
       const s = est.settings || {};
       if (s.hourlyRate !== undefined) document.getElementById('hourly-rate').value = s.hourlyRate;
       if (s.laborHrs   !== undefined) document.getElementById('labor-hrs').value   = s.laborHrs;
-      if (s.wireCost   !== undefined) document.getElementById('wire-cost').value   = s.wireCost;
       if (s.markup     !== undefined) document.getElementById('markup').value      = s.markup;
       if (s.salesTax   !== undefined) document.getElementById('sales-tax').value   = s.salesTax;
+      if (s.subPct     !== undefined) document.getElementById('sub-pct').value     = s.subPct;
 
       const fb = document.getElementById('fixture-tbody'); fb.innerHTML = '';
       (est.fixtures     || []).forEach(r => fb.appendChild(makeFixtureRow(r)));
+      const wb = document.getElementById('wire-tbody');    wb.innerHTML = '';
+      (est.wire         || []).forEach(r => wb.appendChild(makeWireRow(r)));
+      const lb = document.getElementById('lamp-tbody');    lb.innerHTML = '';
+      (est.lamps        || []).forEach(r => lb.appendChild(makeLampRow(r)));
+      const mb = document.getElementById('misc-tbody');    mb.innerHTML = '';
+      (est.misc         || []).forEach(r => mb.appendChild(makeMiscRow(r)));
       const xb = document.getElementById('xfmr-tbody');    xb.innerHTML = '';
       (est.transformers || []).forEach(r => xb.appendChild(makeXfmrRow(r)));
 
@@ -524,17 +803,28 @@
       renderEstimateList();
     } catch (err) {
       alert('Could not load estimate: ' + err.message);
+    } finally {
+      _suppressSave = false;
     }
   }
 
   function newEstimate() {
+    _suppressSave = true;
     currentId = null;
     document.getElementById('estimate-name').value     = '';
     document.getElementById('notes').value             = '';
+    document.getElementById('client-name').value       = '';
+    document.getElementById('client-phone').value      = '';
+    document.getElementById('client-email').value      = '';
+    document.getElementById('client-address').value    = '';
     document.getElementById('fixture-tbody').innerHTML = '';
+    document.getElementById('wire-tbody').innerHTML    = '';
+    document.getElementById('lamp-tbody').innerHTML    = '';
+    document.getElementById('misc-tbody').innerHTML    = '';
     document.getElementById('xfmr-tbody').innerHTML    = '';
     recalc();
     renderEstimateList();
+    _suppressSave = false;
   }
 
   async function deleteCurrentEstimate() {
@@ -551,21 +841,30 @@
 
   function estimateTotal(est) {
     const s = est.settings || {};
-    let matCost = 0, fixtureCount = 0, totalWire = 0;
+    let matCost = 0, fixtureCount = 0;
     (est.fixtures     || []).forEach(r => {
-      const q   = parseInt(r.qty) || 0;
+      const q = parseInt(r.qty) || 0;
       matCost      += q * (parseFloat(r.unit_cost) || 0);
-      totalWire    += q * (parseFloat(r.wire_ft)   || 0);
       fixtureCount += q;
+    });
+    (est.wire || []).forEach(r => {
+      matCost += (parseFloat(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
+    });
+    (est.lamps || []).forEach(r => {
+      matCost += (parseFloat(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
+    });
+    (est.misc || []).forEach(r => {
+      matCost += (parseFloat(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
     });
     (est.transformers || []).forEach(r => {
       matCost += (parseInt(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
     });
-    matCost += totalWire * (s.wireCost || 0);
     const matBilled   = matCost * (1 + (s.markup || 0) / 100);
-    const salesTaxAmt = matBilled * ((s.salesTax || 0) / 100);
+    const salesTaxAmt = matCost * ((s.salesTax || 0) / 100);
     const laborBilled = (s.laborHrs || 0) * (s.hourlyRate || 0);
-    return Math.round(matBilled + salesTaxAmt + laborBilled);
+    const subtotal    = matBilled + salesTaxAmt + laborBilled;
+    const subAmt      = subtotal * ((s.subPct || 0) / 100);
+    return Math.round(subtotal + subAmt);
   }
 
   function renderEstimateList() {
@@ -586,11 +885,164 @@
 
   function printEstimate() { saveCurrentEstimate().then(() => window.print()); }
 
+  function buildMaterialsText() {
+    const s = getState();
+    const lines = [];
+
+    function section(title, rows, modelField) {
+      const filled = (rows || []).filter(r => r[modelField]);
+      if (!filled.length) return;
+      lines.push('── ' + title.toUpperCase() + ' ──');
+      filled.forEach(r => {
+        const qty   = r.qty         || '';
+        const model = r[modelField] || '';
+        lines.push('  ' + [qty, model].filter(Boolean).join('  '));
+      });
+      lines.push('');
+    }
+
+    const name = s.name || 'Estimate';
+    lines.push(name);
+    lines.push('='.repeat(Math.max(name.length, 20)));
+    lines.push('');
+
+    section('Fixtures',       s.fixtures,     'brand_model');
+    section('Wire',           s.wire,         'brand_model');
+    section('Lamps',          s.lamps,        'brand_model');
+    section('Misc Materials', s.misc,         'brand_model');
+    section('Transformers',   s.transformers, 'brand_model');
+
+    return lines.join('\n');
+  }
+
+  function showMaterialsList() {
+    document.getElementById('materials-body').textContent = buildMaterialsText();
+    document.getElementById('materials-modal').classList.add('open');
+  }
+
+  function closeMaterialsList() {
+    document.getElementById('materials-modal').classList.remove('open');
+  }
+
+  function copyMaterialsList() {
+    navigator.clipboard.writeText(buildMaterialsText()).then(() => {
+      const btn = document.querySelector('#materials-modal .hdr-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    });
+  }
+
+  function downloadFile(content, filename, mime) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], { type: mime }));
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function exportJson() {
+    const state    = getState();
+    const name     = state.name || 'estimate';
+    const filename = name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.radiant.json';
+    downloadFile(JSON.stringify(state, null, 2), filename, 'application/json');
+  }
+
+  function exportTxt() {
+    const s        = getState();
+    const fmt      = n => '$' + Math.round(n).toLocaleString();
+    const c        = s.client || {};
+    const settings = s.settings || {};
+    const mkup     = settings.markup   || 0;
+    const taxPct   = settings.salesTax || 0;
+    const subPct   = settings.subPct   || 0;
+    const rate     = settings.hourlyRate || 0;
+    const laborHrs = settings.laborHrs   || 0;
+
+    const lines = [];
+    lines.push('RADIANT SPACES — ESTIMATE');
+    lines.push('='.repeat(50));
+    if (s.name)      lines.push('Estimate: ' + s.name);
+    if (c.name)      lines.push('Client:   ' + c.name);
+    if (c.phone)     lines.push('Phone:    ' + c.phone);
+    if (c.email)     lines.push('Email:    ' + c.email);
+    if (c.address)   lines.push('Address:  ' + c.address);
+    lines.push('');
+
+    function tableSection(title, rows, cols) {
+      if (!rows || rows.length === 0) return;
+      lines.push(title.toUpperCase());
+      lines.push('-'.repeat(50));
+      rows.forEach(r => {
+        const parts = cols.map(c => r[c] || '').filter(Boolean);
+        lines.push('  ' + parts.join(' | '));
+      });
+      lines.push('');
+    }
+
+    tableSection('Fixtures',      s.fixtures,     ['model', 'brand_model', 'type', 'qty', 'watts', 'unit_cost']);
+    tableSection('Wire',          s.wire,         ['model', 'brand_model', 'qty', 'unit_cost']);
+    tableSection('Lamps',         s.lamps,        ['model', 'brand_model', 'qty', 'watts', 'unit_cost']);
+    tableSection('Misc Materials',s.misc,         ['model', 'qty', 'unit_cost']);
+    tableSection('Transformers',  s.transformers, ['model', 'brand_model', 'va_rating', 'qty', 'unit_cost']);
+
+    // Recalculate totals from state
+    let matCost = 0;
+    [...(s.fixtures||[]), ...(s.wire||[]), ...(s.lamps||[]), ...(s.misc||[]), ...(s.transformers||[])].forEach(r => {
+      matCost += (parseFloat(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
+    });
+    const markupAmt   = matCost * (mkup / 100);
+    const matBilled   = matCost + markupAmt;
+    const salesTaxAmt = matCost * (taxPct / 100);
+    const laborBilled = laborHrs * rate;
+    const subtotal    = matBilled + salesTaxAmt + laborBilled;
+    const subAmt      = subtotal * (subPct / 100);
+    const grandTotal  = subtotal + subAmt;
+
+    lines.push('COST BREAKDOWN');
+    lines.push('-'.repeat(50));
+    lines.push('  Materials (cost):     ' + fmt(matCost));
+    lines.push('  Markup (' + mkup + '%):          ' + fmt(markupAmt));
+    lines.push('  Materials (billed):   ' + fmt(matBilled));
+    lines.push('  Sales tax (' + taxPct + '%):     ' + fmt(salesTaxAmt));
+    lines.push('  Labor (' + laborHrs + ' hrs @ $' + rate + '):  ' + fmt(laborBilled));
+    if (subPct > 0) lines.push('  Subcontractor (' + subPct + '%):  ' + fmt(subAmt));
+    lines.push('');
+    lines.push('  TOTAL:                ' + fmt(grandTotal));
+    lines.push('');
+    if (s.notes) { lines.push('NOTES'); lines.push('-'.repeat(50)); lines.push(s.notes); }
+
+    const name     = s.name || 'estimate';
+    const filename = name.replace(/[^a-z0-9]/gi, '_').toLowerCase() + '.txt';
+    downloadFile(lines.join('\n'), filename, 'text/plain');
+  }
+
+  async function importJson(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    event.target.value = '';   // reset so same file can be re-imported
+    try {
+      const text  = await file.text();
+      const state = JSON.parse(text);
+      // Assign a fresh ID so it doesn't overwrite an existing estimate
+      currentId         = uid();
+      state.id          = currentId;
+      state.name        = (state.name || 'Imported') + ' (imported)';
+      await API.saveEstimate(currentId, state);
+      allEstimates = await API.getEstimates();
+      await loadEstimate(currentId);
+    } catch (err) {
+      alert('Import failed: ' + err.message);
+    }
+  }
+
 
   /* ── INIT ───────────────────────────────────────────────────────────── */
 
-  ['hourly-rate', 'labor-hrs', 'wire-cost', 'markup', 'sales-tax']
+  ['hourly-rate', 'labor-hrs', 'markup', 'sales-tax', 'sub-pct']
     .forEach(id => document.getElementById(id).addEventListener('input', recalc));
+
+  ['estimate-name', 'notes', 'client-name', 'client-phone', 'client-email', 'client-address']
+    .forEach(id => document.getElementById(id).addEventListener('input', scheduleAutoSave));
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closePicker(); });
 

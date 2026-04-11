@@ -1,4 +1,4 @@
-# Dockerfile — Radiant Spaces Estimator
+# Dockerfile — Radiant Toolkit Estimator
 # Multi-stage: install deps in builder, copy only what's needed to final image.
 
 # ── STAGE 1: install dependencies ────────────────────────────────────────────
