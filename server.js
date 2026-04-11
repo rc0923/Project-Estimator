@@ -20,7 +20,8 @@ const {
   saveEstimate,
   loadEstimate,
   getAllEstimateSummaries,
-  db,
+  getAllFolders,
+  estimates,
 } = require('./db');
 
 const app  = express();
@@ -117,8 +118,31 @@ app.put('/api/estimates/:id', (req, res) => {
 // DELETE /api/estimates/:id
 app.delete('/api/estimates/:id', (req, res) => {
   try {
-    db.prepare('DELETE FROM estimates WHERE id = ?').run(req.params.id);
+    estimates.delete.run(req.params.id);
     res.json({ deleted: req.params.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PATCH /api/estimates/:id — update folder only (no row re-save)
+app.patch('/api/estimates/:id', (req, res) => {
+  try {
+    const folder = req.body.folder ?? null;
+    estimates.patchFolder.run(folder || null, req.params.id);
+    res.json({ id: req.params.id, folder });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+// ── FOLDERS ───────────────────────────────────────────────────────────────────
+
+// GET /api/folders — all distinct folder names
+app.get('/api/folders', (_req, res) => {
+  try {
+    res.json(getAllFolders.all().map(r => r.folder));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

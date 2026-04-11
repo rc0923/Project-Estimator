@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Radiant Toolkit — Fixture Library</title>
+  <script>
+    (function() {
+      const t = localStorage.getItem('rt-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -13,13 +19,15 @@
   <header>
     <div class="logo"><span>Radiant</span> Toolkit</div>
     <div class="header-divider"></div>
-    <a href="/"                    class="nav-link">Estimator</a>
+    <a href="/"                     class="nav-link">Estimator</a>
+    <a href="/estimates.html"       class="nav-link">Estimates</a>
     <a href="/fixture-library.html" class="nav-link active">Fixture Library</a>
     <div class="header-sep"></div>
     <button class="hdr-btn" onclick="exportLibrary()">Export JSON</button>
     <label class="hdr-btn" style="cursor:pointer">
       Import JSON <input type="file" accept=".json" style="display:none" onchange="importLibrary(event)">
     </label>
+    <button class="hdr-btn theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">☾</button>
   </header>
 
   <!-- ── PAGE CONTENT ───────────────────────────────────────────────────── -->
@@ -386,6 +394,22 @@
       document.getElementById('fixture-grid').innerHTML =
         `<div class="empty-state"><div class="empty-title">Could not load fixtures</div>${err.message}</div>`;
     });
+
+  /* ── THEME ──────────────────────────────────────────────────────────── */
+
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('rt-theme', next);
+    document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀' : '☾';
+  }
+
+  (function() {
+    const saved = localStorage.getItem('rt-theme');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '☀' : '☾';
+  })();
 </script>
 </body>
 </html>

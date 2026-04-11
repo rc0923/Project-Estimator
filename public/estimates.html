@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radiant Toolkit — Estimates</title>
+  <script>
+    (function() {
+      const t = localStorage.getItem('rt-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ── HEADER ─────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="logo"><span>Radiant</span> Toolkit</div>
+    <div class="header-divider"></div>
+    <a href="/"                     class="nav-link">Estimator</a>
+    <a href="/estimates.html"       class="nav-link active">Estimates</a>
+    <a href="/fixture-library.html" class="nav-link">Fixture Library</a>
+    <div class="header-sep"></div>
+    <button class="hdr-btn theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">☾</button>
+  </header>
+
+  <!-- ── PAGE CONTENT ───────────────────────────────────────────────────── -->
+  <div class="page">
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="search-wrap">
+        <input type="text" id="search" placeholder="Search by name or client..." oninput="renderGrid()" />
+      </div>
+      <div class="filter-chips" id="folder-chips">
+        <!-- populated by JS -->
+      </div>
+      <div style="flex:1"></div>
+      <button class="fc-btn primary" onclick="newEstimate()">+ New Estimate</button>
+    </div>
+
+    <!-- Grid -->
+    <div class="est-grid" id="est-grid">
+      <div class="empty-state">
+        <div class="empty-title">Loading estimates...</div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ── FOLDER RENAME MODAL ────────────────────────────────────────────── -->
+  <div class="modal-backdrop" id="rename-folder-modal">
+    <div class="modal" style="max-width:380px">
+      <div class="modal-header">
+        <div class="modal-title">Rename Folder</div>
+        <button class="modal-close" onclick="closeRenameModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding:20px 24px">
+        <label class="form-label">Current name</label>
+        <div id="rename-old-name" style="font-family:var(--mono);font-size:13px;color:var(--text2);margin-bottom:16px"></div>
+        <label class="form-label">New name</label>
+        <input class="form-input" id="rename-new-name" type="text" placeholder="Folder name..." />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeRenameModal()">Cancel</button>
+        <button class="btn-save" onclick="confirmRenameFolder()">Rename</button>
+      </div>
+    </div>
+  </div>
+
+
+<script src="api.js"></script>
+<script>
+
+  /* ── STATE ──────────────────────────────────────────────────────────── */
+
+  let allEstimates = [];
+  let allFolders   = [];
+  let activeFolder = 'all';   // 'all' | 'none' | folder name
+  let renamingFolder = null;
+
+
+  /* ── UTILITIES ──────────────────────────────────────────────────────── */
+
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function fmt$(n) { return '$' + Math.round(n).toLocaleString(); }
+
+  function estimateTotal(est) {
+    const s = est.settings || {};
+    let matCost = 0;
+    [...(est.fixtures||[]), ...(est.wire||[]), ...(est.lamps||[]),
+     ...(est.misc||[]), ...(est.transformers||[])].forEach(r => {
+      matCost += (parseFloat(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
+    });
+    const matBilled   = matCost * (1 + (s.markup || 0) / 100);
+    const salesTaxAmt = matCost * ((s.salesTax || 0) / 100);
+    const laborBilled = (s.laborHrs || 0) * (s.hourlyRate || 0);
+    const subtotal    = matBilled + salesTaxAmt + laborBilled;
+    return Math.round(subtotal * (1 + (s.subPct || 0) / 100));
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  function clientName(est) {
+    const c = est.settings?.client || {};
+    return c.name || '';
+  }
+
+  function deriveFolders(estimates) {
+    const set = new Set();
+    estimates.forEach(e => { if (e.folder) set.add(e.folder); });
+    return [...set].sort();
+  }
+
+
+  /* ── FOLDER CHIPS ───────────────────────────────────────────────────── */
+
+  function renderFolderChips() {
+    const wrap = document.getElementById('folder-chips');
+    const unfoldered = allEstimates.filter(e => !e.folder).length;
+    const chips = [
+      { key: 'all',  label: `All (${allEstimates.length})` },
+      ...allFolders.map(f => ({
+        key: f,
+        label: f,
+        count: allEstimates.filter(e => e.folder === f).length,
+      })),
+    ];
+    if (unfoldered > 0) {
+      chips.push({ key: 'none', label: `Unfiled (${unfoldered})` });
+    }
+
+    wrap.innerHTML = chips.map(c => {
+      const active    = activeFolder === c.key ? ' active' : '';
+      const count     = c.count !== undefined ? ` <span class="chip-count">${c.count}</span>` : '';
+      const isFolder  = c.key !== 'all' && c.key !== 'none';
+      const renameBtn = isFolder
+        ? `<span class="chip-rename-btn" title="Rename folder" onclick="event.stopPropagation();openRenameFolder(event,'${esc(c.key)}')">✎</span>`
+        : '';
+      return `<button class="filter-chip${active}" onclick="setFolder('${esc(c.key)}')">${esc(c.label)}${count}${renameBtn}</button>`;
+    }).join('');
+  }
+
+  function setFolder(key) {
+    activeFolder = key;
+    renderFolderChips();
+    renderGrid();
+  }
+
+
+  /* ── GRID ───────────────────────────────────────────────────────────── */
+
+  function renderGrid() {
+    const q = document.getElementById('search').value.trim().toLowerCase();
+
+    let filtered = allEstimates.filter(est => {
+      if (activeFolder === 'none') { if (est.folder) return false; }
+      else if (activeFolder !== 'all') { if (est.folder !== activeFolder) return false; }
+
+      if (q) {
+        const name   = (est.name || '').toLowerCase();
+        const client = clientName(est).toLowerCase();
+        if (!name.includes(q) && !client.includes(q)) return false;
+      }
+      return true;
+    });
+
+    const grid = document.getElementById('est-grid');
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `<div class="empty-state">
+        <div class="empty-title">${q ? 'No estimates match your search' : 'No estimates yet'}</div>
+        <div class="empty-sub">${q ? '' : 'Click "+ New Estimate" to get started'}</div>
+      </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(est => {
+      const total  = estimateTotal(est);
+      const cname  = clientName(est);
+      const folder = est.folder || '';
+      const date   = fmtDate(est.saved_at);
+      const folderBadge = folder
+        ? `<span class="est-folder-badge" title="Change folder" onclick="openInlineFolderEdit(event,'${esc(est.id)}')">${esc(folder)}</span>`
+        : `<span class="est-folder-empty" onclick="openInlineFolderEdit(event,'${esc(est.id)}')">+ Add to folder</span>`;
+
+      return `<div class="est-card" data-id="${esc(est.id)}">
+        <div class="est-card-top">
+          ${folderBadge}
+          <span class="est-card-date">${date}</span>
+        </div>
+        <div class="est-card-name">${esc(est.name || 'Untitled')}</div>
+        ${cname ? `<div class="est-card-client">${esc(cname)}</div>` : ''}
+        <div class="est-card-total">${fmt$(total)}</div>
+        <div class="est-card-actions">
+          <button class="fc-btn primary" onclick="openEstimate('${esc(est.id)}')">Open</button>
+          <button class="fc-btn"         onclick="duplicateEstimate('${esc(est.id)}')">Duplicate</button>
+          <button class="fc-btn danger"  onclick="deleteEstimate('${esc(est.id)}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+
+  /* ── ACTIONS ────────────────────────────────────────────────────────── */
+
+  function newEstimate() {
+    window.location.href = '/?new=1';
+  }
+
+  function openEstimate(id) {
+    window.location.href = `/?id=${id}`;
+  }
+
+  async function duplicateEstimate(id) {
+    try {
+      const est    = await API.getEstimate(id);
+      const newId  = uid();
+      est.id       = newId;
+      est.name     = (est.name || 'Untitled') + ' (copy)';
+      est.savedAt  = new Date().toISOString();
+      // Flatten settings back to the shape saveEstimate expects
+      const client = est.settings?.client || {};
+      est.client   = client;
+      await API.saveEstimate(newId, est);
+      allEstimates = await API.getEstimates();
+      allFolders   = deriveFolders(allEstimates);
+      renderFolderChips();
+      renderGrid();
+    } catch (err) {
+      alert('Duplicate failed: ' + err.message);
+    }
+  }
+
+  async function deleteEstimate(id) {
+    const est = allEstimates.find(e => e.id === id);
+    if (!confirm(`Delete "${est?.name || 'this estimate'}"?`)) return;
+    try {
+      await API.deleteEstimate(id);
+      allEstimates = allEstimates.filter(e => e.id !== id);
+      allFolders   = deriveFolders(allEstimates);
+      renderFolderChips();
+      renderGrid();
+    } catch (err) {
+      alert('Delete failed: ' + err.message);
+    }
+  }
+
+
+  /* ── INLINE FOLDER PICKER ───────────────────────────────────────────── */
+
+  let _folderPickerCleanup = null;
+
+  function openInlineFolderEdit(evt, id) {
+    evt.stopPropagation();
+
+    // Close any existing picker first
+    if (_folderPickerCleanup) _folderPickerCleanup();
+
+    const anchor   = evt.currentTarget;
+    const existing = allEstimates.find(e => e.id === id)?.folder || '';
+
+    // Build dropdown
+    const drop = document.createElement('div');
+    drop.className = 'folder-picker-drop';
+
+    // Existing folders as options
+    const options = allFolders.filter(f => f !== existing);
+    const rows = [];
+
+    if (existing) {
+      rows.push(`<div class="folder-pick-item folder-pick-remove" data-val="">✕ Remove from folder</div>`);
+    }
+    options.forEach(f => {
+      rows.push(`<div class="folder-pick-item" data-val="${esc(f)}">${esc(f)}</div>`);
+    });
+
+    // Text input for new folder name
+    rows.push(`<div class="folder-pick-new">
+      <input class="folder-pick-input" type="text" placeholder="New folder name..." />
+    </div>`);
+
+    drop.innerHTML = rows.join('');
+
+    // Position below the anchor
+    const rect = anchor.getBoundingClientRect();
+    drop.style.position = 'fixed';
+    drop.style.top      = (rect.bottom + 4) + 'px';
+    drop.style.left     = rect.left + 'px';
+    document.body.appendChild(drop);
+
+    const commit = async (val) => {
+      cleanup();
+      const folder = (val || '').trim() || null;
+      if (folder === existing || (folder === null && !existing)) return;
+      try {
+        await API.patchEstimate(id, { folder });
+        const est = allEstimates.find(e => e.id === id);
+        if (est) est.folder = folder;
+        allFolders = deriveFolders(allEstimates);
+        renderFolderChips();
+        renderGrid();
+      } catch (err) {
+        alert('Could not update folder: ' + err.message);
+      }
+    };
+
+    const cleanup = () => {
+      drop.remove();
+      document.removeEventListener('mousedown', outsideClick);
+      _folderPickerCleanup = null;
+    };
+
+    _folderPickerCleanup = cleanup;
+
+    // Click on existing option
+    drop.querySelectorAll('.folder-pick-item').forEach(el => {
+      el.addEventListener('mousedown', e => {
+        e.preventDefault();
+        commit(el.dataset.val);
+      });
+    });
+
+    // Enter in new-name input
+    const newInput = drop.querySelector('.folder-pick-input');
+    newInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter')  { e.preventDefault(); commit(newInput.value); }
+      if (e.key === 'Escape') { e.preventDefault(); cleanup(); }
+    });
+
+    // Click outside closes without saving
+    const outsideClick = (e) => {
+      if (!drop.contains(e.target) && e.target !== anchor) cleanup();
+    };
+    setTimeout(() => document.addEventListener('mousedown', outsideClick), 0);
+  }
+
+
+  /* ── FOLDER RENAME ──────────────────────────────────────────────────── */
+
+  function openRenameFolder(evt, folderName) {
+    evt.stopPropagation();
+    renamingFolder = folderName;
+    document.getElementById('rename-old-name').textContent = folderName;
+    document.getElementById('rename-new-name').value = folderName;
+    document.getElementById('rename-folder-modal').classList.add('open');
+    setTimeout(() => {
+      const inp = document.getElementById('rename-new-name');
+      inp.focus();
+      inp.select();
+    }, 50);
+  }
+
+  function closeRenameModal() {
+    document.getElementById('rename-folder-modal').classList.remove('open');
+    renamingFolder = null;
+  }
+
+  async function confirmRenameFolder() {
+    const newName = document.getElementById('rename-new-name').value.trim();
+    if (!newName || newName === renamingFolder) { closeRenameModal(); return; }
+
+    // Update every estimate in this folder
+    const toUpdate = allEstimates.filter(e => e.folder === renamingFolder);
+    try {
+      await Promise.all(toUpdate.map(e => API.patchEstimate(e.id, { folder: newName })));
+      toUpdate.forEach(e => { e.folder = newName; });
+      if (activeFolder === renamingFolder) activeFolder = newName;
+      allFolders = deriveFolders(allEstimates);
+      closeRenameModal();
+      renderFolderChips();
+      renderGrid();
+    } catch (err) {
+      alert('Rename failed: ' + err.message);
+    }
+  }
+
+
+  /* ── THEME ──────────────────────────────────────────────────────────── */
+
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('rt-theme', next);
+    document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀' : '☾';
+  }
+
+  (function() {
+    const saved = localStorage.getItem('rt-theme');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '☀' : '☾';
+  })();
+
+
+  /* ── ESCAPE HELPER ──────────────────────────────────────────────────── */
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+
+  /* ── KEYBOARD ───────────────────────────────────────────────────────── */
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeRenameModal();
+  });
+
+
+  /* ── INIT ───────────────────────────────────────────────────────────── */
+
+  API.getEstimates()
+    .then(data => {
+      allEstimates = data;
+      allFolders   = deriveFolders(data);
+      renderFolderChips();
+      renderGrid();
+    })
+    .catch(err => {
+      document.getElementById('est-grid').innerHTML =
+        `<div class="empty-state"><div class="empty-title">Could not load estimates</div><div class="empty-sub">${err.message}</div></div>`;
+    });
+
+</script>
+</body>
+</html>

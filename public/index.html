@@ -4,6 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Radiant Toolkit — Job Estimator</title>
+  <script>
+    // Apply saved theme before CSS loads to prevent flash
+    (function() {
+      const t = localStorage.getItem('rt-theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -15,6 +22,7 @@
     <div class="logo"><span>Radiant</span> Toolkit</div>
     <div class="header-divider"></div>
     <a href="/"                     class="nav-link active">Estimator</a>
+    <a href="/estimates.html"       class="nav-link">Estimates</a>
     <a href="/fixture-library.html" class="nav-link">Fixture Library</a>
     <div class="header-sep"></div>
     <input id="estimate-name" type="text" placeholder="Client / estimate name..." />
@@ -25,12 +33,25 @@
     <label  class="hdr-btn"            style="cursor:pointer">Import<input type="file" accept=".json" style="display:none" onchange="importJson(event)"></label>
     <button class="hdr-btn danger-text" onclick="deleteCurrentEstimate()">Delete</button>
     <button class="hdr-btn save"        id="btn-save" onclick="saveCurrentEstimate()">Save</button>
+    <button class="hdr-btn theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">☀</button>
   </header>
 
   <!-- ── LEFT PANEL — saved estimates ──────────────────────────────────── -->
   <aside class="panel-left">
-    <div class="panel-section-title">Saved Estimates</div>
+    <div class="sidebar-header">
+      <span class="panel-section-title">Saved Estimates</span>
+      <a href="/estimates.html" class="sidebar-manage-link">Manage →</a>
+    </div>
+    <div class="sidebar-search-wrap">
+      <input type="text" id="sidebar-search" class="sidebar-search" placeholder="Search..." oninput="renderEstimateList()" />
+    </div>
     <ul class="estimate-list" id="estimate-list"></ul>
+    <div class="sidebar-folder-row">
+      <label class="sidebar-folder-label">Folder</label>
+      <input type="text" id="current-folder" class="sidebar-folder-input" placeholder="Assign to folder..."
+             list="folder-datalist" oninput="scheduleAutoSave()" />
+      <datalist id="folder-datalist"></datalist>
+    </div>
     <button class="new-estimate-btn" onclick="newEstimate()">
       <span style="font-size:16px;line-height:1">+</span> New estimate
     </button>
@@ -361,6 +382,24 @@
     clearTimeout(_autoSaveTimer);
     flushSave();
   });
+
+
+  /* ── THEME ──────────────────────────────────────────────────────────── */
+
+  function toggleTheme() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const next = isDark ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('rt-theme', next);
+    document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀' : '☾';
+  }
+
+  // Set correct icon on load
+  (function() {
+    const saved = localStorage.getItem('rt-theme');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = saved === 'dark' ? '☀' : '☾';
+  })();
 
 
   /* ── PICKER ─────────────────────────────────────────────────────────── */
@@ -715,9 +754,10 @@
 
   function getState() {
     return {
-      id:    currentId,
-      name:  document.getElementById('estimate-name').value,
-      notes: document.getElementById('notes').value,
+      id:     currentId,
+      name:   document.getElementById('estimate-name').value,
+      folder: document.getElementById('current-folder').value.trim() || null,
+      notes:  document.getElementById('notes').value,
       client: {
         name:    document.getElementById('client-name').value,
         phone:   document.getElementById('client-phone').value,
@@ -772,8 +812,9 @@
       const est = await API.getEstimate(id);
       currentId = id;
 
-      document.getElementById('estimate-name').value = est.name  || '';
-      document.getElementById('notes').value         = est.notes || '';
+      document.getElementById('estimate-name').value  = est.name   || '';
+      document.getElementById('current-folder').value = est.folder || '';
+      document.getElementById('notes').value          = est.notes  || '';
 
       const c = est.client || est.settings?.client || {};
       document.getElementById('client-name').value    = c.name    || '';
@@ -812,6 +853,7 @@
     _suppressSave = true;
     currentId = null;
     document.getElementById('estimate-name').value     = '';
+    document.getElementById('current-folder').value   = '';
     document.getElementById('notes').value             = '';
     document.getElementById('client-name').value       = '';
     document.getElementById('client-phone').value      = '';
@@ -868,19 +910,41 @@
   }
 
   function renderEstimateList() {
+    const q    = (document.getElementById('sidebar-search')?.value || '').trim().toLowerCase();
     const list = document.getElementById('estimate-list');
     list.innerHTML = '';
-    allEstimates.forEach(est => {
+
+    const visible = allEstimates.filter(est => {
+      if (!q) return true;
+      const name   = (est.name || '').toLowerCase();
+      const client = (est.settings?.client?.name || '').toLowerCase();
+      const folder = (est.folder || '').toLowerCase();
+      return name.includes(q) || client.includes(q) || folder.includes(q);
+    });
+
+    visible.forEach(est => {
       const li     = document.createElement('li');
       li.className = 'estimate-item' + (est.id === currentId ? ' active' : '');
       const date   = est.saved_at ? new Date(est.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      const folder = est.folder ? `<span class="item-folder-badge">${est.folder}</span>` : '';
       li.innerHTML = `
-        <div class="estimate-item-name">${est.name || 'Untitled'}</div>
+        <div class="estimate-item-name">${est.name || 'Untitled'}${folder}</div>
         <div class="estimate-item-meta">${date} · $${estimateTotal(est).toLocaleString()}</div>
       `;
       li.onclick = () => loadEstimate(est.id);
       list.appendChild(li);
     });
+
+    if (visible.length === 0 && q) {
+      list.innerHTML = `<li class="estimate-item-empty">No matches</li>`;
+    }
+
+    // Keep folder datalist in sync
+    const dl = document.getElementById('folder-datalist');
+    if (dl) {
+      const folders = [...new Set(allEstimates.map(e => e.folder).filter(Boolean))].sort();
+      dl.innerHTML  = folders.map(f => `<option value="${f}">`).join('');
+    }
   }
 
   function printEstimate() { saveCurrentEstimate().then(() => window.print()); }
@@ -1041,7 +1105,7 @@
   ['hourly-rate', 'labor-hrs', 'markup', 'sales-tax', 'sub-pct']
     .forEach(id => document.getElementById(id).addEventListener('input', recalc));
 
-  ['estimate-name', 'notes', 'client-name', 'client-phone', 'client-email', 'client-address']
+  ['estimate-name', 'notes', 'current-folder', 'client-name', 'client-phone', 'client-email', 'client-address']
     .forEach(id => document.getElementById(id).addEventListener('input', scheduleAutoSave));
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closePicker(); });
@@ -1052,9 +1116,20 @@
       allEstimates    = estimates;
       libraryFixtures = fixtures;
       renderEstimateList();
-      // Auto-load most recent estimate
-      if (estimates.length > 0) loadEstimate(estimates[0].id);
-      else recalc();
+      // If ?id= param present, open that estimate; otherwise load most recent
+      const params = new URLSearchParams(window.location.search);
+      const urlId  = params.get('id');
+      const isNew  = params.get('new');
+      history.replaceState(null, '', '/');   // clean up URL
+      if (urlId && estimates.some(e => e.id === urlId)) {
+        loadEstimate(urlId);
+      } else if (isNew) {
+        newEstimate();
+      } else if (estimates.length > 0) {
+        loadEstimate(estimates[0].id);
+      } else {
+        recalc();
+      }
     })
     .catch(err => {
       console.error('Init failed:', err);

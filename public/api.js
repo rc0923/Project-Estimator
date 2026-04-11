@@ -26,14 +26,17 @@ const API = (() => {
 
   // ── ESTIMATES ──────────────────────────────────────────────────────────────
 
-  function getEstimates()      { return request('GET',    '/api/estimates'); }
-  function getEstimate(id)     { return request('GET',    `/api/estimates/${id}`); }
-  function saveEstimate(id, e) { return request('PUT',    `/api/estimates/${id}`, e); }
-  function deleteEstimate(id)  { return request('DELETE', `/api/estimates/${id}`); }
+  function getEstimates()           { return request('GET',    '/api/estimates'); }
+  function getEstimate(id)          { return request('GET',    `/api/estimates/${id}`); }
+  function saveEstimate(id, e)      { return request('PUT',    `/api/estimates/${id}`, e); }
+  function patchEstimate(id, patch) { return request('PATCH',  `/api/estimates/${id}`, patch); }
+  function deleteEstimate(id)       { return request('DELETE', `/api/estimates/${id}`); }
+  function getFolders()             { return request('GET',    '/api/folders'); }
 
   return {
     getFixtures, saveFixture, deleteFixture,
-    getEstimates, getEstimate, saveEstimate, deleteEstimate,
+    getEstimates, getEstimate, saveEstimate, patchEstimate, deleteEstimate,
+    getFolders,
   };
 
 })();

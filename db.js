@@ -67,6 +67,7 @@ db.exec(`
 const migrations = [
   `ALTER TABLE fixtures ADD COLUMN integrated INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE estimate_fixtures ADD COLUMN brand_model TEXT`,
+  `ALTER TABLE estimates ADD COLUMN folder TEXT`,
 ];
 for (const sql of migrations) {
   try { db.exec(sql); } catch (_) { /* column already exists — skip */ }
@@ -110,21 +111,26 @@ const fixtureQueries = {
 
 const estimateQueries = {
   getAll: db.prepare(`
-    SELECT id, name, notes, settings, saved_at FROM estimates ORDER BY saved_at DESC
+    SELECT id, name, folder, notes, settings, saved_at FROM estimates ORDER BY saved_at DESC
   `),
 
   getById: db.prepare(`
-    SELECT id, name, notes, settings, saved_at FROM estimates WHERE id = ?
+    SELECT id, name, folder, notes, settings, saved_at FROM estimates WHERE id = ?
   `),
 
   upsertMeta: db.prepare(`
-    INSERT INTO estimates (id, name, notes, settings, saved_at)
-    VALUES (@id, @name, @notes, @settings, @saved_at)
+    INSERT INTO estimates (id, name, folder, notes, settings, saved_at)
+    VALUES (@id, @name, @folder, @notes, @settings, @saved_at)
     ON CONFLICT(id) DO UPDATE SET
       name     = excluded.name,
+      folder   = excluded.folder,
       notes    = excluded.notes,
       settings = excluded.settings,
       saved_at = excluded.saved_at
+  `),
+
+  patchFolder: db.prepare(`
+    UPDATE estimates SET folder = ? WHERE id = ?
   `),
 
   deleteRows: db.prepare(`
@@ -154,6 +160,7 @@ const saveEstimate = db.transaction((estimate) => {
   estimateQueries.upsertMeta.run({
     id:       estimate.id,
     name:     estimate.name     || '',
+    folder:   estimate.folder   || null,
     notes:    estimate.notes    || '',
     settings: JSON.stringify({ ...(estimate.settings || {}), client: estimate.client || {} }),
     saved_at: estimate.savedAt  || new Date().toISOString(),
@@ -267,6 +274,13 @@ function getAllEstimateSummaries() {
   }));
 }
 
+// All distinct folder names (non-null, non-empty)
+const getAllFolders = db.prepare(`
+  SELECT DISTINCT folder FROM estimates
+  WHERE folder IS NOT NULL AND folder != ''
+  ORDER BY folder
+`);
+
 module.exports = {
   db,
   fixtures:  fixtureQueries,
@@ -274,4 +288,5 @@ module.exports = {
   saveEstimate,
   loadEstimate,
   getAllEstimateSummaries,
+  getAllFolders,
 };
