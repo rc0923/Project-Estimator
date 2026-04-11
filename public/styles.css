@@ -1,0 +1,965 @@
+/* =============================================================================
+   RADIANT SPACES — SHARED STYLES
+   styles.css
+   Used by: radiant-estimator.html, fixture-library.html
+   ============================================================================= */
+
+
+/* -----------------------------------------------------------------------------
+   1. RESET & ROOT VARIABLES
+   ----------------------------------------------------------------------------- */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Backgrounds */
+  --bg:        #f4f1eb;
+  --surface:   #faf8f4;
+  --surface2:  #ede9e0;
+
+  /* Borders */
+  --border:    #d6d0c4;
+  --border2:   #c8c1b0;
+
+  /* Text */
+  --text:      #1a1814;
+  --text2:     #6b6559;
+  --text3:     #9e9487;
+
+  /* Accent (green) */
+  --accent:       #2d5a3d;
+  --accent-light: #e8f0ea;
+  --accent-mid:   #4a8a5e;
+
+  /* Danger (red) */
+  --danger:       #8b2e1a;
+  --danger-light: #f5e8e4;
+
+  /* Warning (amber) */
+  --amber:        #7a4f10;
+  --amber-light:  #faf0e0;
+
+  /* Typography */
+  --mono: 'DM Mono', monospace;
+  --sans: 'DM Sans', sans-serif;
+
+  /* Radii */
+  --radius:    6px;
+  --radius-lg: 10px;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+
+/* -----------------------------------------------------------------------------
+   2. HEADER & NAV
+   ----------------------------------------------------------------------------- */
+
+header {
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 52px;
+  border-bottom: 1px solid #1e3d28;
+}
+
+.header-divider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.header-sep { flex: 1; }
+
+.logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: #c8e6d0;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.logo span { color: #fff; }
+
+.nav-link {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  text-decoration: none;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.nav-link:hover  { color: #fff; background: rgba(255, 255, 255, 0.12); }
+.nav-link.active { color: #fff; background: rgba(255, 255, 255, 0.18); }
+
+
+/* -----------------------------------------------------------------------------
+   3. HEADER BUTTONS
+   ----------------------------------------------------------------------------- */
+
+.hdr-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 12px;
+  font-family: var(--sans);
+  padding: 5px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.hdr-btn:hover        { background: rgba(255, 255, 255, 0.22); }
+.hdr-btn.save         { background: rgba(255, 255, 255, 0.9); color: var(--accent); font-weight: 500; }
+.hdr-btn.save:hover   { background: #fff; }
+.hdr-btn.danger-text  { color: #ffa0a0; }
+
+/* Library page uses a slightly different hdr-btn base */
+.hdr-btn.solid {
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: var(--accent);
+  font-weight: 500;
+}
+.hdr-btn.solid:hover { background: #fff; }
+
+
+/* -----------------------------------------------------------------------------
+   4. CARDS
+   ----------------------------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card-title {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+
+
+/* -----------------------------------------------------------------------------
+   5. TABLES (estimator)
+   ----------------------------------------------------------------------------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+th {
+  text-align: left;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 10px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+tr:last-child td { border-bottom: none; }
+tr:hover td      { background: var(--surface2); }
+
+/* Column widths — fixture table */
+.col-model { width: 26%; }
+.col-type  { width: 13%; }
+.col-qty   { width: 7%;  }
+.col-watts { width: 9%;  }
+.col-unit  { width: 10%; }
+.col-wire  { width: 9%;  }
+.col-cost  { width: 11%; }
+.col-lib   { width: 9%;  }
+.col-del   { width: 6%;  }
+
+/* Inline table inputs */
+.tbl-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-family: var(--sans);
+  color: var(--text);
+  outline: none;
+}
+.tbl-input:focus          { border-color: var(--border2); background: var(--surface); }
+.tbl-input.mono           { font-family: var(--mono); font-size: 12px; }
+select.tbl-input          { cursor: pointer; }
+
+.row-total {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text2);
+  text-align: right;
+}
+
+
+/* -----------------------------------------------------------------------------
+   6. TABLE ROW BUTTONS
+   ----------------------------------------------------------------------------- */
+
+.del-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text3);
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.1s;
+  line-height: 1;
+}
+.del-btn:hover { background: var(--danger-light); color: var(--danger); }
+
+.lib-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text2);
+  font-size: 11px;
+  font-family: var(--sans);
+  padding: 3px 7px;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.lib-btn:hover { background: var(--accent-light); color: var(--accent); border-color: #b8d4bf; }
+
+.add-row-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 18px;
+  background: none;
+  border: none;
+  color: var(--accent-mid);
+  font-size: 12px;
+  font-family: var(--sans);
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.1s;
+}
+.add-row-btn:hover { background: var(--accent-light); }
+
+
+/* -----------------------------------------------------------------------------
+   7. NOTES TEXTAREA
+   ----------------------------------------------------------------------------- */
+
+.notes-area {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  resize: vertical;
+  min-height: 80px;
+  padding: 14px 18px;
+  outline: none;
+  line-height: 1.6;
+}
+.notes-area::placeholder { color: var(--text3); }
+
+
+/* -----------------------------------------------------------------------------
+   8. SUMMARY PANEL (estimator right panel)
+   ----------------------------------------------------------------------------- */
+
+.panel-right {
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.summary-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.summary-label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.setting-row label {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.setting-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text);
+  width: 90px;
+  text-align: right;
+  outline: none;
+}
+.setting-input:focus { border-color: var(--accent); }
+
+/* Stat blocks */
+.stat-block {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.stat-block-label { font-size: 11px; color: var(--text3); }
+.stat-block-val   { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--text); margin-top: 2px; }
+.stat-block-sub   { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+.stat-block.accent               { background: var(--accent-light); border-color: #b8d4bf; }
+.stat-block.accent .stat-block-label { color: #3d7050; }
+.stat-block.accent .stat-block-val   { color: var(--accent); }
+
+.stat-block.warn               { background: var(--amber-light); border-color: #e8d0a0; }
+.stat-block.warn .stat-block-label { color: #8a6020; }
+.stat-block.warn .stat-block-val   { color: var(--amber); }
+
+/* Cost breakdown lines */
+.divider { height: 1px; background: var(--border); }
+
+.total-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--text2);
+}
+.total-line.bold { font-weight: 500; color: var(--text); font-size: 13px; }
+.total-line .val { font-family: var(--mono); }
+
+/* Transformer load warning */
+.xfmr-warning         { display: none; font-size: 11px; color: var(--danger); margin-top: 4px; }
+.xfmr-warning.visible { display: block; }
+
+.markup-note {
+  font-size: 11px;
+  color: var(--text3);
+  padding: 8px 10px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  line-height: 1.5;
+}
+
+
+/* -----------------------------------------------------------------------------
+   9. LEFT PANEL — saved estimates (estimator)
+   ----------------------------------------------------------------------------- */
+
+.panel-left {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+.panel-section-title {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  padding: 0 16px 8px;
+}
+
+.estimate-list { list-style: none; }
+
+.estimate-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.1s;
+}
+.estimate-item:hover  { background: var(--surface2); }
+.estimate-item.active { background: var(--accent-light); border-left-color: var(--accent); }
+
+.estimate-item-name { font-size: 13px; font-weight: 500; }
+.estimate-item-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+
+.new-estimate-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 16px 0;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius);
+  color: var(--text2);
+  font-size: 12px;
+  font-family: var(--sans);
+  cursor: pointer;
+  width: calc(100% - 32px);
+  transition: all 0.15s;
+}
+.new-estimate-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+
+/* -----------------------------------------------------------------------------
+   10. ESTIMATOR APP SHELL
+   ----------------------------------------------------------------------------- */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  grid-template-rows: 52px 1fr;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Estimator header spans full width */
+.app-shell > header { grid-column: 1 / -1; }
+
+.main {
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Estimate name input (in header) */
+#estimate-name {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 5px 10px;
+  width: 200px;
+  outline: none;
+}
+#estimate-name::placeholder { color: rgba(255, 255, 255, 0.4); }
+#estimate-name:focus {
+  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.18);
+}
+
+
+/* -----------------------------------------------------------------------------
+   11. MODALS (shared base — used by both pages)
+   ----------------------------------------------------------------------------- */
+
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 18, 15, 0.5);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  width: 100%;
+}
+
+.modal-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title { font-size: 15px; font-weight: 500; }
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text3);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.modal-close:hover { background: var(--surface2); color: var(--text); }
+
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Modal action buttons */
+.btn-cancel {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 7px 16px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.btn-cancel:hover { background: var(--surface2); }
+
+.btn-save {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  padding: 7px 20px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-save:hover { background: var(--accent-mid); }
+
+
+/* -----------------------------------------------------------------------------
+   12. FORM ELEMENTS (library add/edit modal)
+   ----------------------------------------------------------------------------- */
+
+.modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.form-group.full { grid-column: 1 / -1; }
+
+.form-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.form-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+}
+.form-input:focus          { border-color: var(--accent); background: var(--surface); }
+.form-input.mono           { font-family: var(--mono); }
+select.form-input          { cursor: pointer; }
+textarea.form-input        { resize: vertical; min-height: 72px; line-height: 1.5; }
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  user-select: none;
+}
+.form-check:hover { border-color: var(--border2); }
+.form-check input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+.form-check-hint { color: var(--text3); font-size: 12px; }
+
+#integrated-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  background: var(--accent-light);
+  border: 1px solid #b8d4bf;
+  border-radius: var(--radius);
+}
+
+
+/* -----------------------------------------------------------------------------
+   13. FIXTURE LIBRARY PAGE
+   ----------------------------------------------------------------------------- */
+
+/* Page wrapper */
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 24px;
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+.search-wrap input {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px 8px 34px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.search-wrap::before {
+  content: '⌕';
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.filter-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+  cursor: pointer;
+}
+.filter-select:focus { border-color: var(--accent); }
+
+.add-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 16px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.add-btn:hover { background: var(--accent-mid); }
+
+.count-label {
+  font-size: 12px;
+  color: var(--text3);
+  margin-bottom: 16px;
+}
+
+/* Fixture card grid */
+.fixture-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.fixture-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color 0.15s;
+}
+.fixture-card:hover { border-color: var(--border2); }
+
+.fc-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fc-name  { font-size: 13px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.fc-model { font-size: 11px; font-family: var(--mono); color: var(--text3); margin-top: 2px; }
+
+.fc-type-badge {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+.fc-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.fc-stat { background: var(--bg); border-radius: var(--radius); padding: 7px 10px; }
+.fc-stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+.fc-stat-val   { font-family: var(--mono); font-size: 14px; font-weight: 500; color: var(--text); margin-top: 1px; }
+
+.fc-notes {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.fc-actions {
+  display: flex;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.fc-btn {
+  flex: 1;
+  padding: 6px;
+  font-size: 12px;
+  font-family: var(--sans);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.fc-btn:hover              { background: var(--surface2); border-color: var(--border2); }
+.fc-btn.danger:hover       { background: var(--danger-light); color: var(--danger); border-color: #e8b8aa; }
+
+
+/* -----------------------------------------------------------------------------
+   14. LIBRARY PICKER MODAL (estimator)
+   ----------------------------------------------------------------------------- */
+
+/* Override modal positioning for the picker — top-aligned */
+#picker-modal {
+  align-items: flex-start;
+  padding: 60px 20px 20px;
+}
+
+#picker-modal .modal {
+  max-width: 680px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Picker header has a search input inline */
+.modal-search {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+}
+.modal-search:focus { border-color: var(--accent); }
+
+/* Filter chips row */
+.modal-filter-bar {
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.filter-chip:hover,
+.filter-chip.active { background: var(--accent-light); color: var(--accent); border-color: #b8d4bf; }
+
+/* Scrollable fixture list */
+.picker-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  gap: 12px;
+  transition: background 0.1s;
+}
+.picker-item:last-child { border-bottom: none; }
+.picker-item:hover      { background: var(--accent-light); }
+
+.pi-info   { flex: 1; min-width: 0; }
+.pi-name   { font-size: 13px; font-weight: 500; }
+.pi-sub    { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 2px; }
+
+.pi-right  { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+.pi-cost   { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text); }
+.pi-type   { font-size: 10px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); border-radius: 10px; padding: 2px 8px; }
+
+.picker-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text3);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.modal-footer-bar {
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text3);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.go-library-link { font-size: 11px; color: var(--accent); text-decoration: none; }
+.go-library-link:hover { text-decoration: underline; }
+
+/* Library add/edit modal sizing */
+#modal .modal {
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+
+/* -----------------------------------------------------------------------------
+   15. EMPTY STATES
+   ----------------------------------------------------------------------------- */
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+  font-size: 13px;
+  grid-column: 1 / -1;
+}
+.empty-icon  { font-size: 36px; margin-bottom: 12px; color: var(--border2); }
+.empty-title { font-size: 15px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+
+
+/* -----------------------------------------------------------------------------
+   16. PRINT STYLES
+   ----------------------------------------------------------------------------- */
+
+@media print {
+  .panel-left,
+  .panel-right,
+  header button,
+  .add-row-btn,
+  .lib-btn,
+  .del-btn { display: none !important; }
+
+  .app-shell { grid-template-columns: 0 1fr 0; }
+  .main      { overflow: visible; padding: 0; }
+  .card      { break-inside: avoid; }
+}

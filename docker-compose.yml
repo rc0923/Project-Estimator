@@ -1,0 +1,14 @@
+services:
+  radiant:
+    build: .
+    container_name: radiant-spaces
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      # SQLite database persists here on the host VM
+      # Change ./data to any path you prefer, e.g. /opt/radiant/data
+      - ./data:/app/data
+    environment:
+      - PORT=3000
+      - DB_PATH=/app/data/radiant.db

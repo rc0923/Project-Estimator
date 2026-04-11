@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Radiant Spaces — Job Estimator</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+
+  <!-- ── HEADER ─────────────────────────────────────────────────────────── -->
+  <header>
+    <div class="logo"><span>Radiant</span> Spaces</div>
+    <div class="header-divider"></div>
+    <a href="/"                     class="nav-link active">Estimator</a>
+    <a href="/fixture-library.html" class="nav-link">Fixture Library</a>
+    <div class="header-sep"></div>
+    <input id="estimate-name" type="text" placeholder="Client / estimate name..." />
+    <button class="hdr-btn"             onclick="printEstimate()">Print</button>
+    <button class="hdr-btn danger-text" onclick="deleteCurrentEstimate()">Delete</button>
+    <button class="hdr-btn save"        id="btn-save" onclick="saveCurrentEstimate()">Save</button>
+  </header>
+
+  <!-- ── LEFT PANEL — saved estimates ──────────────────────────────────── -->
+  <aside class="panel-left">
+    <div class="panel-section-title">Saved Estimates</div>
+    <ul class="estimate-list" id="estimate-list"></ul>
+    <button class="new-estimate-btn" onclick="newEstimate()">
+      <span style="font-size:16px;line-height:1">+</span> New estimate
+    </button>
+  </aside>
+
+  <!-- ── MAIN CONTENT ───────────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- Fixture table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Fixtures</span>
+        <span id="fixture-count" style="font-size:11px;font-family:var(--mono);color:var(--text3)">0 items</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-model">Model / Description</th>
+            <th class="col-type">Type</th>
+            <th class="col-qty">Qty</th>
+            <th class="col-watts">Watts</th>
+            <th class="col-unit">Unit cost</th>
+            <th class="col-wire">Wire ft</th>
+            <th class="col-cost">Line total</th>
+            <th class="col-lib"></th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="fixture-tbody"></tbody>
+      </table>
+      <div style="display:flex;border-top:1px solid var(--border)">
+        <button class="add-row-btn" style="flex:1" onclick="addRow()">
+          <span style="font-size:16px;line-height:1">+</span> Add row manually
+        </button>
+        <button class="add-row-btn" style="flex:1;border-left:1px solid var(--border)" onclick="openPicker('fixture')">
+          <span style="font-size:16px;line-height:1">◫</span> Pick from library
+        </button>
+      </div>
+    </div>
+
+    <!-- Transformer table -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Transformers</span>
+        <span id="xfmr-count" style="font-size:11px;font-family:var(--mono);color:var(--text3)">0 items</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-model">Model / Description</th>
+            <th style="width:13%">VA Rating</th>
+            <th class="col-qty">Qty</th>
+            <th style="width:10%">Unit cost</th>
+            <th style="width:11%">Line total</th>
+            <th class="col-lib"></th>
+            <th class="col-del"></th>
+          </tr>
+        </thead>
+        <tbody id="xfmr-tbody"></tbody>
+      </table>
+      <div style="display:flex;border-top:1px solid var(--border)">
+        <button class="add-row-btn" style="flex:1" onclick="addXfmrRow()">
+          <span style="font-size:16px;line-height:1">+</span> Add row manually
+        </button>
+        <button class="add-row-btn" style="flex:1;border-left:1px solid var(--border)" onclick="openPicker('transformer')">
+          <span style="font-size:16px;line-height:1">◫</span> Pick from library
+        </button>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="card">
+      <div class="card-header"><span class="card-title">Notes</span></div>
+      <textarea class="notes-area" id="notes" placeholder="Site notes, special conditions, scope clarifications..."></textarea>
+    </div>
+
+  </main>
+
+  <!-- ── RIGHT PANEL — summary ──────────────────────────────────────────── -->
+  <aside class="panel-right">
+    <div class="summary-section">
+      <div class="summary-label">Settings</div>
+      <div class="setting-row"><label>Hourly rate ($)</label>      <input class="setting-input" id="hourly-rate" type="number" value="95"   min="0" step="5"    /></div>
+      <div class="setting-row"><label>Labor hours</label>          <input class="setting-input" id="labor-hrs"  type="number" value="2"    min="0" step="0.5"  /></div>
+      <div class="setting-row"><label>Wire cost ($/ft)</label>     <input class="setting-input" id="wire-cost"  type="number" value="0.35" min="0" step="0.05" /></div>
+      <div class="setting-row"><label>Materials markup %</label>   <input class="setting-input" id="markup"     type="number" value="30"   min="0" step="5"    /></div>
+      <div class="setting-row"><label>NYS Sales tax %</label>      <input class="setting-input" id="sales-tax"  type="number" value="8.75" min="0" step="0.25" /></div>
+    </div>
+    <div class="divider"></div>
+    <div class="summary-section">
+      <div class="summary-label">Transformer Load</div>
+      <div class="stat-block" id="load-block">
+        <div class="stat-block-label">Total fixture load</div>
+        <div class="stat-block-val"  id="total-watts">0 W</div>
+        <div class="stat-block-sub"  id="load-sub">Add fixtures to calculate</div>
+      </div>
+      <div id="xfmr-capacity-block" style="display:none" class="stat-block">
+        <div class="stat-block-label">Transformer capacity</div>
+        <div class="stat-block-val"  id="xfmr-capacity">— VA</div>
+        <div class="stat-block-sub"  id="xfmr-headroom"></div>
+      </div>
+      <div id="xfmr-warning" class="xfmr-warning">⚠ Load exceeds transformer capacity</div>
+    </div>
+    <div class="divider"></div>
+    <div class="summary-section">
+      <div class="summary-label">Wire</div>
+      <div class="stat-block">
+        <div class="stat-block-label">Total wire run</div>
+        <div class="stat-block-val"  id="total-wire">0 ft</div>
+        <div class="stat-block-sub"  id="wire-cost-sub">—</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="summary-section">
+      <div class="summary-label">Cost Breakdown</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="total-line"><span>Materials (cost)</span><span class="val" id="mat-cost">$0</span></div>
+        <div class="total-line"><span id="markup-label">Markup (30%)</span><span class="val" id="mat-markup">$0</span></div>
+        <div class="total-line bold" style="padding-top:4px;border-top:1px solid var(--border)">
+          <span>Materials (billed)</span><span class="val" id="mat-billed">$0</span>
+        </div>
+        <div class="total-line"><span id="sales-tax-label">Sales tax (8.75%)</span><span class="val" id="sales-tax-amt">$0</span></div>
+      </div>
+      <div style="height:6px"></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="total-line"><span>Labor hrs</span><span class="val" id="labor-hrs-display">0.0 hrs</span></div>
+        <div class="total-line bold" style="padding-top:4px;border-top:1px solid var(--border)">
+          <span>Labor (billed)</span><span class="val" id="labor-cost">$0</span>
+        </div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat-block accent">
+      <div class="stat-block-label">Estimate Total</div>
+      <div class="stat-block-val"  id="grand-total">$0</div>
+      <div class="stat-block-sub"  id="per-fixture-cost">—</div>
+    </div>
+    <div class="markup-note" id="margin-note"></div>
+  </aside>
+
+</div>
+
+<!-- ── LIBRARY PICKER MODAL ───────────────────────────────────────────── -->
+<div class="modal-backdrop" id="picker-modal" onclick="pickerBackdropClose(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Pick from library</span>
+      <input class="modal-search" id="picker-search" type="text" placeholder="Search fixtures..." oninput="renderPicker()" />
+      <button class="modal-close" onclick="closePicker()">✕</button>
+    </div>
+    <div class="modal-filter-bar" id="picker-filter-bar"></div>
+    <div class="picker-list"      id="picker-list"></div>
+    <div class="modal-footer-bar">
+      <span id="picker-count-label"></span>
+      <a href="/fixture-library.html" class="go-library-link">Manage library →</a>
+    </div>
+  </div>
+</div>
+
+<script src="api.js"></script>
+<script>
+  /* ── CONSTANTS & STATE ──────────────────────────────────────────────── */
+
+  const FIXTURE_TYPES = [
+    'Uplight', 'Path Light', 'Downlight', 'Flood',
+    'Well Light', 'Step Light', 'Wall Wash', 'Hardscape', 'Transformer', 'Other'
+  ];
+
+  let currentId         = null;
+  let allEstimates      = [];     // summary list for sidebar
+  let libraryFixtures   = [];     // cached fixture library
+  let pickerTarget      = 'fixture';
+  let pickerTypeFilter  = '';
+  let _replaceMode      = false;
+  let _replaceTargetRow = null;
+
+
+  /* ── UTILITIES ──────────────────────────────────────────────────────── */
+
+  function uid()           { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function esc(s)          { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function fmt$(n)         { return '$' + Math.round(n).toLocaleString(); }
+  function fmtD(n, d = 0)  { return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }); }
+
+  function setSaveState(busy) {
+    const btn = document.getElementById('btn-save');
+    btn.disabled    = busy;
+    btn.textContent = busy ? 'Saving...' : 'Save';
+  }
+
+
+  /* ── PICKER ─────────────────────────────────────────────────────────── */
+
+  function openPicker(target) {
+    pickerTarget     = target;
+    pickerTypeFilter = '';
+    _replaceMode     = false;
+    document.getElementById('picker-search').value = '';
+    renderPicker();
+    document.getElementById('picker-modal').classList.add('open');
+    setTimeout(() => document.getElementById('picker-search').focus(), 50);
+  }
+
+  function closePicker() {
+    document.getElementById('picker-modal').classList.remove('open');
+    _replaceMode      = false;
+    _replaceTargetRow = null;
+  }
+
+  function pickerBackdropClose(e) {
+    if (e.target === document.getElementById('picker-modal')) closePicker();
+  }
+
+  function setPickerFilter(t) { pickerTypeFilter = t; renderPicker(); }
+
+  function renderPicker() {
+    const q   = document.getElementById('picker-search').value.toLowerCase();
+    const lib = libraryFixtures;
+
+    const types     = [...new Set(lib.map(f => f.type).filter(Boolean))].sort();
+    const filterBar = document.getElementById('picker-filter-bar');
+    filterBar.innerHTML = ['', ...types].map(t =>
+      `<div class="filter-chip ${pickerTypeFilter === t ? 'active' : ''}" onclick="setPickerFilter('${t}')">${t || 'All'}</div>`
+    ).join('');
+
+    let items = lib;
+    if (pickerTarget === 'transformer') items = items.filter(f => f.type === 'Transformer');
+    if (pickerTypeFilter)               items = items.filter(f => f.type === pickerTypeFilter);
+    if (q) items = items.filter(f => [f.name, f.brand, f.model, f.notes].join(' ').toLowerCase().includes(q));
+
+    document.getElementById('picker-count-label').textContent =
+      `${items.length} fixture${items.length !== 1 ? 's' : ''} in library`;
+
+    const list = document.getElementById('picker-list');
+    if (lib.length === 0) {
+      list.innerHTML = `<div class="picker-empty">Your fixture library is empty.<br><a href="/fixture-library.html" style="color:var(--accent)">Add fixtures →</a></div>`;
+      return;
+    }
+    if (items.length === 0) {
+      list.innerHTML = `<div class="picker-empty">No matches.</div>`;
+      return;
+    }
+    list.innerHTML = items.map(f => `
+      <div class="picker-item" onclick="pickFixture('${f.id}')">
+        <div class="pi-info">
+          <div class="pi-name">${esc(f.name)}</div>
+          <div class="pi-sub">${[f.brand, f.model, f.watts ? f.watts + 'W' : null, f.cct].filter(Boolean).join(' · ')}</div>
+        </div>
+        <div class="pi-right">
+          <div class="pi-cost">${f.cost ? '$' + parseFloat(f.cost).toFixed(2) : '—'}</div>
+          <div class="pi-type">${esc(f.type || 'Other')}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function pickFixture(id) {
+    const f = libraryFixtures.find(x => x.id === id);
+    if (!f) return;
+    const label = [f.brand, f.model].filter(Boolean).join(' ') || f.name;
+
+    if (_replaceMode && _replaceTargetRow) {
+      const tr       = _replaceTargetRow;
+      const setField = (field, val) => { const el = tr.querySelector(`[data-field=${field}]`); if (el) el.value = val; };
+      setField('model', label);
+      if (pickerTarget === 'fixture') {
+        if (f.type)    setField('type',      f.type);
+        if (f.watts)   setField('watts',     f.watts);
+        if (f.cost)    setField('unit_cost', f.cost);
+        if (f.wire_ft) setField('wire_ft',   f.wire_ft);
+      } else {
+        if (f.watts) setField('va_rating',  f.watts);
+        if (f.cost)  setField('unit_cost',  f.cost);
+      }
+    } else {
+      if (pickerTarget === 'transformer') {
+        document.getElementById('xfmr-tbody').appendChild(
+          makeXfmrRow({ model: label, va_rating: f.watts || '', unit_cost: f.cost || '', qty: 1 })
+        );
+      } else {
+        document.getElementById('fixture-tbody').appendChild(
+          makeFixtureRow({ model: label, type: f.type || 'Uplight', qty: 1, watts: f.watts || '', unit_cost: f.cost || '', wire_ft: f.wire_ft || '' })
+        );
+      }
+    }
+    recalc();
+    closePicker();
+  }
+
+  function replaceFromLib(btn, target) {
+    _replaceTargetRow = btn.closest('tr');
+    _replaceMode      = true;
+    pickerTarget      = target;
+    pickerTypeFilter  = '';
+    document.getElementById('picker-search').value = '';
+    renderPicker();
+    document.getElementById('picker-modal').classList.add('open');
+    setTimeout(() => document.getElementById('picker-search').focus(), 50);
+  }
+
+
+  /* ── ROW BUILDERS ───────────────────────────────────────────────────── */
+
+  function makeFixtureRow(data = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="tbl-input"      data-field="model"     placeholder="Model / description"      value="${esc(data.model     || '')}" oninput="recalc()" /></td>
+      <td><select class="tbl-input"     data-field="type"      onchange="recalc()">${FIXTURE_TYPES.map(t => `<option ${data.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+      <td><input class="tbl-input mono" data-field="qty"       type="number" min="0"             value="${data.qty        || 1}"  oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="watts"     type="number" min="0" step="0.5"  value="${data.watts      || ''}" placeholder="—"    oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="unit_cost" type="number" min="0" step="0.01" value="${data.unit_cost  || ''}" placeholder="—"    oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="wire_ft"   type="number" min="0"             value="${data.wire_ft    || ''}" placeholder="—"    oninput="recalc()" /></td>
+      <td class="row-total">—</td>
+      <td><button class="lib-btn" title="Replace from library" onclick="replaceFromLib(this, 'fixture')">lib</button></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    `;
+    return tr;
+  }
+
+  function makeXfmrRow(data = {}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="tbl-input"      data-field="model"     placeholder="Model / description"        value="${esc(data.model     || '')}" oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="va_rating" type="number" min="0" step="50"          value="${data.va_rating  || ''}" placeholder="VA"  oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="qty"       type="number" min="0"                    value="${data.qty        || 1}"                        oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="unit_cost" type="number" min="0" step="0.01"        value="${data.unit_cost  || ''}" placeholder="—"       oninput="recalc()" /></td>
+      <td class="row-total">—</td>
+      <td><button class="lib-btn" title="Replace from library" onclick="replaceFromLib(this, 'transformer')">lib</button></td>
+      <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
+    `;
+    return tr;
+  }
+
+  function addRow()     { document.getElementById('fixture-tbody').appendChild(makeFixtureRow()); recalc(); }
+  function addXfmrRow() { document.getElementById('xfmr-tbody').appendChild(makeXfmrRow());      recalc(); }
+  function delRow(btn)  { btn.closest('tr').remove(); recalc(); }
+
+
+  /* ── RECALCULATION ──────────────────────────────────────────────────── */
+
+  function recalc() {
+    const rate     = parseFloat(document.getElementById('hourly-rate').value) || 0;
+    const laborHrs = parseFloat(document.getElementById('labor-hrs').value)   || 0;
+    const wc       = parseFloat(document.getElementById('wire-cost').value)   || 0;
+    const mkup     = parseFloat(document.getElementById('markup').value)      || 0;
+    const taxPct   = parseFloat(document.getElementById('sales-tax').value)   || 0;
+
+    let matCost = 0, totalWatts = 0, totalWire = 0, fixtureCount = 0;
+
+    document.getElementById('fixture-tbody').querySelectorAll('tr').forEach(tr => {
+      const qty = parseInt(tr.querySelector('[data-field=qty]')?.value)         || 0;
+      const w   = parseFloat(tr.querySelector('[data-field=watts]')?.value)     || 0;
+      const uc  = parseFloat(tr.querySelector('[data-field=unit_cost]')?.value) || 0;
+      const wft = parseFloat(tr.querySelector('[data-field=wire_ft]')?.value)   || 0;
+      const lt  = qty * uc;
+      const rtCell = tr.querySelector('.row-total');
+      if (rtCell) rtCell.textContent = lt > 0 ? fmt$(lt) : '—';
+      matCost += lt; totalWatts += qty * w; totalWire += qty * wft; fixtureCount += qty;
+    });
+
+    let xfmrCap = 0;
+    document.getElementById('xfmr-tbody').querySelectorAll('tr').forEach(tr => {
+      const qty = parseInt(tr.querySelector('[data-field=qty]')?.value)         || 0;
+      const uc  = parseFloat(tr.querySelector('[data-field=unit_cost]')?.value) || 0;
+      const va  = parseFloat(tr.querySelector('[data-field=va_rating]')?.value) || 0;
+      const lt  = qty * uc;
+      const rtCell = tr.querySelector('.row-total');
+      if (rtCell) rtCell.textContent = lt > 0 ? fmt$(lt) : '—';
+      matCost += lt; xfmrCap += qty * va;
+    });
+
+    const wireCostTotal  = totalWire * wc;
+    matCost             += wireCostTotal;
+    const markupAmt      = matCost * (mkup / 100);
+    const matBilled      = matCost + markupAmt;
+    const salesTaxAmt    = matBilled * (taxPct / 100);
+    const laborBilled    = laborHrs * rate;
+    const grandTotal     = matBilled + salesTaxAmt + laborBilled;
+
+    document.getElementById('fixture-count').textContent =
+      fixtureCount + ' fixture' + (fixtureCount !== 1 ? 's' : '');
+    document.getElementById('xfmr-count').textContent =
+      document.getElementById('xfmr-tbody').querySelectorAll('tr').length + ' unit(s)';
+
+    document.getElementById('total-watts').textContent = fmtD(totalWatts, 0) + ' W';
+    document.getElementById('load-sub').textContent    = fixtureCount > 0
+      ? `across ${fixtureCount} fixture${fixtureCount !== 1 ? 's' : ''}` : 'Add fixtures to calculate';
+
+    if (xfmrCap > 0) {
+      const headroom = xfmrCap - totalWatts;
+      const pct      = Math.round(totalWatts / xfmrCap * 100);
+      document.getElementById('xfmr-capacity-block').style.display = '';
+      document.getElementById('xfmr-capacity').textContent = fmtD(xfmrCap, 0) + ' VA';
+      document.getElementById('xfmr-headroom').textContent =
+        `${pct}% loaded · ${headroom >= 0 ? '+' : ''}${fmtD(headroom, 0)} VA headroom`;
+      const overload = totalWatts > xfmrCap;
+      const warn     = pct > 80;
+      document.getElementById('xfmr-warning').classList.toggle('visible', overload);
+      const lb = document.getElementById('load-block');
+      lb.classList.toggle('warn',   overload || warn);
+      lb.classList.toggle('accent', !overload && !warn);
+    } else {
+      document.getElementById('xfmr-capacity-block').style.display = 'none';
+      document.getElementById('xfmr-warning').classList.remove('visible');
+      document.getElementById('load-block').classList.remove('accent', 'warn');
+    }
+
+    document.getElementById('total-wire').textContent    = fmtD(totalWire, 0) + ' ft';
+    document.getElementById('wire-cost-sub').textContent = wireCostTotal > 0
+      ? fmt$(wireCostTotal) + ' material cost' : '—';
+    document.getElementById('mat-cost').textContent      = fmt$(matCost);
+    document.getElementById('markup-label').textContent  = `Markup (${mkup}%)`;
+    document.getElementById('mat-markup').textContent    = fmt$(markupAmt);
+    document.getElementById('mat-billed').textContent    = fmt$(matBilled);
+    document.getElementById('sales-tax-label').textContent = `Sales tax (${taxPct}%)`;
+    document.getElementById('sales-tax-amt').textContent = fmt$(salesTaxAmt);
+    document.getElementById('labor-hrs-display').textContent = fmtD(laborHrs, 1) + ' hrs';
+    document.getElementById('labor-cost').textContent    = fmt$(laborBilled);
+    document.getElementById('grand-total').textContent   = fmt$(grandTotal);
+    document.getElementById('per-fixture-cost').textContent = fixtureCount > 0
+      ? `${fmt$(grandTotal / fixtureCount)} per fixture avg` : '—';
+    const margin = grandTotal > 0 ? ((grandTotal - matCost) / grandTotal * 100) : 0;
+    document.getElementById('margin-note').textContent =
+      `Gross margin: ${fmtD(margin, 1)}%  ·  Labor: ${fmtD(laborHrs, 1)} hrs`;
+  }
+
+
+  /* ── ESTIMATE PERSISTENCE ───────────────────────────────────────────── */
+
+  function getState() {
+    return {
+      id:    currentId,
+      name:  document.getElementById('estimate-name').value,
+      notes: document.getElementById('notes').value,
+      settings: {
+        hourlyRate: parseFloat(document.getElementById('hourly-rate').value) || 0,
+        laborHrs:   parseFloat(document.getElementById('labor-hrs').value)   || 0,
+        wireCost:   parseFloat(document.getElementById('wire-cost').value)   || 0,
+        markup:     parseFloat(document.getElementById('markup').value)      || 0,
+        salesTax:   parseFloat(document.getElementById('sales-tax').value)   || 0,
+      },
+      fixtures:     getRowData('fixture-tbody'),
+      transformers: getRowData('xfmr-tbody'),
+    };
+  }
+
+  function getRowData(tbodyId) {
+    const rows = [];
+    document.getElementById(tbodyId).querySelectorAll('tr').forEach(tr => {
+      const row = {};
+      tr.querySelectorAll('input, select').forEach(el => { row[el.dataset.field] = el.value; });
+      rows.push(row);
+    });
+    return rows;
+  }
+
+  async function saveCurrentEstimate() {
+    if (!currentId) currentId = uid();
+    const state    = getState();
+    state.savedAt  = new Date().toISOString();
+    setSaveState(true);
+    try {
+      await API.saveEstimate(currentId, state);
+      // Refresh sidebar list
+      allEstimates = await API.getEstimates();
+      renderEstimateList();
+    } catch (err) {
+      alert('Save failed: ' + err.message);
+    } finally {
+      setSaveState(false);
+    }
+  }
+
+  async function loadEstimate(id) {
+    try {
+      const est = await API.getEstimate(id);
+      currentId = id;
+
+      document.getElementById('estimate-name').value = est.name  || '';
+      document.getElementById('notes').value         = est.notes || '';
+
+      const s = est.settings || {};
+      if (s.hourlyRate !== undefined) document.getElementById('hourly-rate').value = s.hourlyRate;
+      if (s.laborHrs   !== undefined) document.getElementById('labor-hrs').value   = s.laborHrs;
+      if (s.wireCost   !== undefined) document.getElementById('wire-cost').value   = s.wireCost;
+      if (s.markup     !== undefined) document.getElementById('markup').value      = s.markup;
+      if (s.salesTax   !== undefined) document.getElementById('sales-tax').value   = s.salesTax;
+
+      const fb = document.getElementById('fixture-tbody'); fb.innerHTML = '';
+      (est.fixtures     || []).forEach(r => fb.appendChild(makeFixtureRow(r)));
+      const xb = document.getElementById('xfmr-tbody');    xb.innerHTML = '';
+      (est.transformers || []).forEach(r => xb.appendChild(makeXfmrRow(r)));
+
+      recalc();
+      renderEstimateList();
+    } catch (err) {
+      alert('Could not load estimate: ' + err.message);
+    }
+  }
+
+  function newEstimate() {
+    currentId = null;
+    document.getElementById('estimate-name').value     = '';
+    document.getElementById('notes').value             = '';
+    document.getElementById('fixture-tbody').innerHTML = '';
+    document.getElementById('xfmr-tbody').innerHTML    = '';
+    recalc();
+    renderEstimateList();
+  }
+
+  async function deleteCurrentEstimate() {
+    if (!currentId) return newEstimate();
+    if (!confirm('Delete this estimate?')) return;
+    try {
+      await API.deleteEstimate(currentId);
+      allEstimates = allEstimates.filter(e => e.id !== currentId);
+      newEstimate();
+    } catch (err) {
+      alert('Delete failed: ' + err.message);
+    }
+  }
+
+  function estimateTotal(est) {
+    const s = est.settings || {};
+    let matCost = 0, fixtureCount = 0, totalWire = 0;
+    (est.fixtures     || []).forEach(r => {
+      const q   = parseInt(r.qty) || 0;
+      matCost      += q * (parseFloat(r.unit_cost) || 0);
+      totalWire    += q * (parseFloat(r.wire_ft)   || 0);
+      fixtureCount += q;
+    });
+    (est.transformers || []).forEach(r => {
+      matCost += (parseInt(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
+    });
+    matCost += totalWire * (s.wireCost || 0);
+    const matBilled   = matCost * (1 + (s.markup || 0) / 100);
+    const salesTaxAmt = matBilled * ((s.salesTax || 0) / 100);
+    const laborBilled = (s.laborHrs || 0) * (s.hourlyRate || 0);
+    return Math.round(matBilled + salesTaxAmt + laborBilled);
+  }
+
+  function renderEstimateList() {
+    const list = document.getElementById('estimate-list');
+    list.innerHTML = '';
+    allEstimates.forEach(est => {
+      const li     = document.createElement('li');
+      li.className = 'estimate-item' + (est.id === currentId ? ' active' : '');
+      const date   = est.saved_at ? new Date(est.saved_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+      li.innerHTML = `
+        <div class="estimate-item-name">${est.name || 'Untitled'}</div>
+        <div class="estimate-item-meta">${date} · $${estimateTotal(est).toLocaleString()}</div>
+      `;
+      li.onclick = () => loadEstimate(est.id);
+      list.appendChild(li);
+    });
+  }
+
+  function printEstimate() { saveCurrentEstimate().then(() => window.print()); }
+
+
+  /* ── INIT ───────────────────────────────────────────────────────────── */
+
+  ['hourly-rate', 'labor-hrs', 'wire-cost', 'markup', 'sales-tax']
+    .forEach(id => document.getElementById(id).addEventListener('input', recalc));
+
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePicker(); });
+
+  // Load estimates sidebar + fixture library in parallel
+  Promise.all([API.getEstimates(), API.getFixtures()])
+    .then(([estimates, fixtures]) => {
+      allEstimates    = estimates;
+      libraryFixtures = fixtures;
+      renderEstimateList();
+      // Auto-load most recent estimate
+      if (estimates.length > 0) loadEstimate(estimates[0].id);
+      else recalc();
+    })
+    .catch(err => {
+      console.error('Init failed:', err);
+    });
+</script>
+</body>
+</html>
