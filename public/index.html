@@ -242,8 +242,9 @@
       <div class="setting-row"><label>Hourly rate ($)</label>    <input class="setting-input" id="hourly-rate" type="number" value="110"  min="0" step="5"    /></div>
       <div class="setting-row"><label>Labor hours</label>        <input class="setting-input" id="labor-hrs"  type="number" value="2"    min="0" step="0.5"  /></div>
       <div class="setting-row"><label>Materials markup %</label> <input class="setting-input" id="markup"     type="number" value="50"   min="0" step="5"    /></div>
-      <div class="setting-row"><label>NYS Sales tax %</label>    <input class="setting-input" id="sales-tax"  type="number" value="8.75" min="0" step="0.25" /></div>
-      <div class="setting-row"><label>Subcontractor %</label>    <input class="setting-input" id="sub-pct"    type="number" value="0"    min="0" step="1"    /></div>
+      <div class="setting-row"><label>NYS Sales tax %</label>    <input class="setting-input" id="sales-tax"       type="number" value="8.75" min="0" step="0.25" /></div>
+      <div class="setting-row"><label>Electrician ($)</label>   <input class="setting-input" id="electrician-cost" type="number" value="0"    min="0" step="50"   /></div>
+      <div class="setting-row"><label>Subcontractor %</label>   <input class="setting-input" id="sub-pct"          type="number" value="0"    min="0" step="1"    /></div>
     </div>
     <div class="divider"></div>
     <div class="summary-section">
@@ -281,6 +282,10 @@
       <div id="sub-pct-block" style="display:none;height:6px"></div>
       <div id="sub-pct-line" style="display:none;flex-direction:column;gap:6px">
         <div class="total-line"><span id="sub-pct-label">Subcontractor (0%)</span><span class="val" id="sub-pct-amt">$0</span></div>
+      </div>
+      <div id="electrician-block" style="display:none;height:6px"></div>
+      <div id="electrician-line" style="display:none;flex-direction:column;gap:6px">
+        <div class="total-line"><span>Electrician</span><span class="val" id="electrician-amt">$0</span></div>
       </div>
     </div>
     <div class="divider"></div>
@@ -711,8 +716,9 @@
     const rate     = parseFloat(document.getElementById('hourly-rate').value) || 0;
     const laborHrs = parseFloat(document.getElementById('labor-hrs').value)   || 0;
     const mkup     = parseFloat(document.getElementById('markup').value)      || 0;
-    const taxPct   = parseFloat(document.getElementById('sales-tax').value)   || 0;
-    const subPct   = parseFloat(document.getElementById('sub-pct').value)     || 0;
+    const taxPct        = parseFloat(document.getElementById('sales-tax').value)       || 0;
+    const electricianAmt = parseFloat(document.getElementById('electrician-cost').value) || 0;
+    const subPct        = parseFloat(document.getElementById('sub-pct').value)         || 0;
 
     let matCost = 0, totalWatts = 0, fixtureCount = 0;
 
@@ -774,7 +780,7 @@
     const laborBilled = laborHrs * rate;
     const subtotal    = matBilled + salesTaxAmt + laborBilled;
     const subAmt      = subtotal * (subPct / 100);
-    const grandTotal  = subtotal + subAmt;
+    const grandTotal  = subtotal + subAmt + electricianAmt;
 
     document.getElementById('fixture-count').textContent =
       fixtureCount + ' fixture' + (fixtureCount !== 1 ? 's' : '');
@@ -825,6 +831,11 @@
     document.getElementById('sub-pct-label').textContent   = `Subcontractor (${subPct}%)`;
     document.getElementById('sub-pct-amt').textContent     = fmt$(subAmt);
 
+    const showElectrician = electricianAmt > 0;
+    document.getElementById('electrician-block').style.display = showElectrician ? '' : 'none';
+    document.getElementById('electrician-line').style.display  = showElectrician ? 'flex' : 'none';
+    document.getElementById('electrician-amt').textContent     = fmt$(electricianAmt);
+
     document.getElementById('grand-total').textContent   = fmt$(grandTotal);
     document.getElementById('per-fixture-cost').textContent = fixtureCount > 0
       ? `${fmt$(grandTotal / fixtureCount)} per fixture avg` : '—';
@@ -851,8 +862,9 @@
         hourlyRate: parseFloat(document.getElementById('hourly-rate').value) || 0,
         laborHrs:   parseFloat(document.getElementById('labor-hrs').value)   || 0,
         markup:     parseFloat(document.getElementById('markup').value)      || 0,
-        salesTax:   parseFloat(document.getElementById('sales-tax').value)   || 0,
-        subPct:     parseFloat(document.getElementById('sub-pct').value)     || 0,
+        salesTax:       parseFloat(document.getElementById('sales-tax').value)       || 0,
+        electricianCost: parseFloat(document.getElementById('electrician-cost').value) || 0,
+        subPct:         parseFloat(document.getElementById('sub-pct').value)         || 0,
       },
       fixtures:     getRowData('fixture-tbody'),
       wire:         getRowData('wire-tbody'),
@@ -909,8 +921,9 @@
       if (s.hourlyRate !== undefined) document.getElementById('hourly-rate').value = s.hourlyRate;
       if (s.laborHrs   !== undefined) document.getElementById('labor-hrs').value   = s.laborHrs;
       if (s.markup     !== undefined) document.getElementById('markup').value      = s.markup;
-      if (s.salesTax   !== undefined) document.getElementById('sales-tax').value   = s.salesTax;
-      if (s.subPct     !== undefined) document.getElementById('sub-pct').value     = s.subPct;
+      if (s.salesTax       !== undefined) document.getElementById('sales-tax').value       = s.salesTax;
+      if (s.electricianCost !== undefined) document.getElementById('electrician-cost').value = s.electricianCost;
+      if (s.subPct         !== undefined) document.getElementById('sub-pct').value         = s.subPct;
 
       const fb = document.getElementById('fixture-tbody'); fb.innerHTML = '';
       (est.fixtures     || []).forEach(r => fb.appendChild(makeFixtureRow(r)));
@@ -984,12 +997,13 @@
     (est.transformers || []).forEach(r => {
       matCost += (parseInt(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
     });
-    const matBilled   = matCost * (1 + (s.markup || 0) / 100);
-    const salesTaxAmt = matCost * ((s.salesTax || 0) / 100);
-    const laborBilled = (s.laborHrs || 0) * (s.hourlyRate || 0);
-    const subtotal    = matBilled + salesTaxAmt + laborBilled;
-    const subAmt      = subtotal * ((s.subPct || 0) / 100);
-    return Math.round(subtotal + subAmt);
+    const matBilled      = matCost * (1 + (s.markup || 0) / 100);
+    const salesTaxAmt    = matCost * ((s.salesTax || 0) / 100);
+    const laborBilled    = (s.laborHrs || 0) * (s.hourlyRate || 0);
+    const subtotal       = matBilled + salesTaxAmt + laborBilled;
+    const subAmt         = subtotal * ((s.subPct || 0) / 100);
+    const electricianAmt = s.electricianCost || 0;
+    return Math.round(subtotal + subAmt + electricianAmt);
   }
 
   function renderEstimateList() {
@@ -1099,11 +1113,12 @@
     const fmt      = n => '$' + Math.round(n).toLocaleString();
     const c        = s.client || {};
     const settings = s.settings || {};
-    const mkup     = settings.markup   || 0;
-    const taxPct   = settings.salesTax || 0;
-    const subPct   = settings.subPct   || 0;
-    const rate     = settings.hourlyRate || 0;
-    const laborHrs = settings.laborHrs   || 0;
+    const mkup           = settings.markup        || 0;
+    const taxPct         = settings.salesTax      || 0;
+    const electricianAmt = settings.electricianCost || 0;
+    const subPct         = settings.subPct        || 0;
+    const rate           = settings.hourlyRate    || 0;
+    const laborHrs       = settings.laborHrs      || 0;
 
     const lines = [];
     lines.push('RADIANT SPACES — ESTIMATE');
@@ -1143,7 +1158,7 @@
     const laborBilled = laborHrs * rate;
     const subtotal    = matBilled + salesTaxAmt + laborBilled;
     const subAmt      = subtotal * (subPct / 100);
-    const grandTotal  = subtotal + subAmt;
+    const grandTotal  = subtotal + subAmt + electricianAmt;
 
     lines.push('COST BREAKDOWN');
     lines.push('-'.repeat(50));
@@ -1153,6 +1168,7 @@
     lines.push('  Sales tax (' + taxPct + '%):     ' + fmt(salesTaxAmt));
     lines.push('  Labor (' + laborHrs + ' hrs @ $' + rate + '):  ' + fmt(laborBilled));
     if (subPct > 0) lines.push('  Subcontractor (' + subPct + '%):  ' + fmt(subAmt));
+    if (electricianAmt > 0) lines.push('  Electrician:          ' + fmt(electricianAmt));
     lines.push('');
     lines.push('  TOTAL:                ' + fmt(grandTotal));
     lines.push('');
@@ -1185,7 +1201,7 @@
 
   /* ── INIT ───────────────────────────────────────────────────────────── */
 
-  ['hourly-rate', 'labor-hrs', 'markup', 'sales-tax', 'sub-pct']
+  ['hourly-rate', 'labor-hrs', 'markup', 'sales-tax', 'electrician-cost', 'sub-pct']
     .forEach(id => document.getElementById(id).addEventListener('input', recalc));
 
   ['estimate-name', 'notes', 'current-folder', 'client-name', 'client-phone', 'client-email', 'client-address']

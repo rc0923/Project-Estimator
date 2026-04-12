@@ -95,11 +95,12 @@
      ...(est.misc||[]), ...(est.transformers||[])].forEach(r => {
       matCost += (parseFloat(r.qty) || 0) * (parseFloat(r.unit_cost) || 0);
     });
-    const matBilled   = matCost * (1 + (s.markup || 0) / 100);
-    const salesTaxAmt = matCost * ((s.salesTax || 0) / 100);
-    const laborBilled = (s.laborHrs || 0) * (s.hourlyRate || 0);
-    const subtotal    = matBilled + salesTaxAmt + laborBilled;
-    return Math.round(subtotal * (1 + (s.subPct || 0) / 100));
+    const matBilled      = matCost * (1 + (s.markup || 0) / 100);
+    const salesTaxAmt    = matCost * ((s.salesTax || 0) / 100);
+    const laborBilled    = (s.laborHrs || 0) * (s.hourlyRate || 0);
+    const subtotal       = matBilled + salesTaxAmt + laborBilled;
+    const electricianAmt = s.electricianCost || 0;
+    return Math.round(subtotal * (1 + (s.subPct || 0) / 100) + electricianAmt);
   }
 
   function fmtDate(iso) {
