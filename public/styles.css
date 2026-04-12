@@ -183,6 +183,7 @@ header {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .card-header {
@@ -267,6 +268,7 @@ tr:hover td      { background: var(--surface2); }
 }
 .tbl-input:focus          { border-color: var(--border2); background: var(--surface); }
 .tbl-input.mono           { font-family: var(--mono); font-size: 12px; text-align: right; }
+input[type="number"].tbl-input { padding-right: 0; }
 select.tbl-input          { cursor: pointer; }
 
 .row-total {
@@ -984,6 +986,16 @@ textarea.form-input        { resize: vertical; min-height: 72px; line-height: 1.
   overflow: hidden;
 }
 
+/* Qty step overlays the picker without touching the flex layout */
+.picker-qty-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  flex-direction: column;
+  z-index: 1;
+}
+
 /* Picker header has a search input inline */
 .modal-search {
   flex: 1;
@@ -1069,6 +1081,60 @@ textarea.form-input        { resize: vertical; min-height: 72px; line-height: 1.
 .go-library-link { font-size: 11px; color: var(--accent); text-decoration: none; }
 .go-library-link:hover { text-decoration: underline; }
 
+/* Picker quantity step */
+.picker-back-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--sans);
+}
+.picker-back-btn:hover { text-decoration: underline; }
+
+.picker-qty-body {
+  padding: 32px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.picker-qty-item {
+  padding: 16px 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.picker-qty-name  { font-size: 15px; font-weight: 500; color: var(--text); }
+.picker-qty-model { font-size: 12px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+
+.picker-qty-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.picker-qty-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  min-width: 70px;
+}
+.picker-qty-input {
+  width: 100px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  font-size: 18px;
+  font-family: var(--mono);
+  font-weight: 500;
+  color: var(--text);
+  text-align: center;
+  outline: none;
+}
+.picker-qty-input:focus { border-color: var(--accent); }
+
 /* Library add/edit modal sizing */
 #modal .modal {
   max-width: 520px;
@@ -1090,6 +1156,33 @@ textarea.form-input        { resize: vertical; min-height: 72px; line-height: 1.
 }
 .empty-icon  { font-size: 36px; margin-bottom: 12px; color: var(--border2); }
 .empty-title { font-size: 15px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+
+
+/* -----------------------------------------------------------------------------
+   TOAST NOTIFICATION
+   ----------------------------------------------------------------------------- */
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  z-index: 9999;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 
 /* -----------------------------------------------------------------------------

@@ -1,26 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Radiant Toolkit — Fixture Library</title>
   <script>
-    (function() {
+    (function () {
       const t = localStorage.getItem('rt-theme');
       if (t) document.documentElement.setAttribute('data-theme', t);
     })();
   </script>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
   <!-- ── HEADER ─────────────────────────────────────────────────────────── -->
   <header>
     <div class="logo"><span>Radiant</span> Toolkit</div>
     <div class="header-divider"></div>
-    <a href="/"                     class="nav-link">Estimator</a>
-    <a href="/estimates.html"       class="nav-link">Estimates</a>
+    <a href="/" class="nav-link">Estimator</a>
+    <a href="/estimates.html" class="nav-link">Estimates</a>
     <a href="/fixture-library.html" class="nav-link active">Fixture Library</a>
     <div class="header-sep"></div>
     <button class="hdr-btn" onclick="exportLibrary()">Export JSON</button>
@@ -37,7 +41,9 @@
       <div class="search-wrap">
         <input type="text" id="search" placeholder="Search by name, model, or brand..." oninput="renderGrid()" />
       </div>
-      <select class="filter-select" id="brand-filter" onchange="renderGrid()"><option value="">All brands</option></select>
+      <select class="filter-select" id="brand-filter" onchange="renderGrid()">
+        <option value="">All brands</option>
+      </select>
       <button class="add-btn" onclick="openModal(null, 'fixture')">+ Add fixture</button>
       <button class="add-btn" onclick="openModal(null, 'wire')">+ Add wire</button>
       <button class="add-btn" onclick="openModal(null, 'lamp')">+ Add lamp</button>
@@ -49,13 +55,16 @@
 
     <div class="count-label" id="count-label"></div>
     <div class="fixture-grid" id="fixture-grid">
-      <div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">Loading...</div></div>
+      <div class="empty-state">
+        <div class="empty-icon">◻</div>
+        <div class="empty-title">Loading...</div>
+      </div>
     </div>
 
   </div>
 
   <!-- ── ADD / EDIT MODAL ───────────────────────────────────────────────── -->
-  <div class="modal-backdrop" id="modal" onclick="backdropClose(event)">
+  <div class="modal-backdrop" id="modal">
     <div class="modal">
       <div class="modal-header">
         <span class="modal-title" id="modal-title">Add fixture</span>
@@ -104,7 +113,8 @@
         </div>
         <label class="form-check">
           <input type="checkbox" id="f-integrated" onchange="toggleIntegrated()" />
-          <span>Integrated fixture <span class="form-check-hint">(built-in LED — has fixed wattage, CCT &amp; beam angle)</span></span>
+          <span>Integrated fixture <span class="form-check-hint">(built-in LED — has fixed wattage, CCT &amp; beam
+              angle)</span></span>
         </label>
         <div id="integrated-fields" style="display:none">
           <div class="form-row">
@@ -127,7 +137,8 @@
         <div class="form-row">
           <div class="form-group full">
             <label class="form-label">Notes</label>
-            <textarea class="form-input" id="f-notes" placeholder="Finish options, install tips, supplier info..."></textarea>
+            <textarea class="form-input" id="f-notes"
+              placeholder="Finish options, install tips, supplier info..."></textarea>
           </div>
         </div>
         <div id="modal-error" style="display:none;color:var(--danger);font-size:12px;margin-top:-6px;"></div>
@@ -139,75 +150,75 @@
     </div>
   </div>
 
-<script src="api.js"></script>
-<script>
-  /* ── STATE ──────────────────────────────────────────────────────────── */
+  <script src="api.js"></script>
+  <script>
+    /* ── STATE ──────────────────────────────────────────────────────────── */
 
-  let editingId   = null;
-  let allFixtures = [];
-  let activeTab   = '';
-
-
-  /* ── UTILITIES ──────────────────────────────────────────────────────── */
-
-  function uid()  { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
-  function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
-
-  function showError(msg) {
-    const el = document.getElementById('modal-error');
-    el.textContent = msg;
-    el.style.display = msg ? '' : 'none';
-  }
-
-  function setBusy(busy) {
-    document.getElementById('btn-save').disabled    = busy;
-    document.getElementById('btn-save').textContent = busy ? 'Saving...' : 'Save fixture';
-  }
+    let editingId = null;
+    let allFixtures = [];
+    let activeTab = '';
 
 
-  /* ── GRID RENDER ────────────────────────────────────────────────────── */
+    /* ── UTILITIES ──────────────────────────────────────────────────────── */
 
-  function setTab(t) { activeTab = t; renderGrid(); }
+    function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 
-  function renderGrid() {
-    const q      = document.getElementById('search').value.toLowerCase();
-    const brandF = document.getElementById('brand-filter').value;
-
-    // Build tab bar from types present in library
-    const types   = [...new Set(allFixtures.map(f => f.type).filter(Boolean))].sort();
-    const tabsEl  = document.getElementById('lib-tabs');
-    tabsEl.innerHTML = ['', ...types].map(t =>
-      `<button class="lib-tab${activeTab === t ? ' active' : ''}" onclick="setTab('${t}')">${t || 'All'}</button>`
-    ).join('');
-
-    // Repopulate brand filter preserving selection
-    const brands  = [...new Set(allFixtures.map(f => f.brand).filter(Boolean))].sort();
-    const brandEl = document.getElementById('brand-filter');
-    brandEl.innerHTML = '<option value="">All brands</option>' + brands.map(b => `<option ${b === brandF ? 'selected' : ''}>${b}</option>`).join('');
-
-    const filtered = allFixtures.filter(f => {
-      const matchQ = !q        || [f.name, f.model, f.brand, f.notes].join(' ').toLowerCase().includes(q);
-      const matchT = !activeTab || f.type === activeTab;
-      const matchB = !brandF   || f.brand === brandF;
-      return matchQ && matchT && matchB;
-    });
-
-    document.getElementById('count-label').textContent =
-      `${filtered.length} item${filtered.length !== 1 ? 's' : ''}` +
-      (allFixtures.length !== filtered.length ? ` (${allFixtures.length} total)` : '');
-
-    const grid = document.getElementById('fixture-grid');
-
-    if (allFixtures.length === 0) {
-      grid.innerHTML = `<div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">No fixtures yet</div>Add your first fixture to build your library.</div>`;
-      return;
-    }
-    if (filtered.length === 0) {
-      grid.innerHTML = `<div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">No matches</div>Try a different search or filter.</div>`;
-      return;
+    function showError(msg) {
+      const el = document.getElementById('modal-error');
+      el.textContent = msg;
+      el.style.display = msg ? '' : 'none';
     }
 
-    grid.innerHTML = filtered.map(f => `
+    function setBusy(busy) {
+      document.getElementById('btn-save').disabled = busy;
+      document.getElementById('btn-save').textContent = busy ? 'Saving...' : 'Save fixture';
+    }
+
+
+    /* ── GRID RENDER ────────────────────────────────────────────────────── */
+
+    function setTab(t) { activeTab = t; renderGrid(); }
+
+    function renderGrid() {
+      const q = document.getElementById('search').value.toLowerCase();
+      const brandF = document.getElementById('brand-filter').value;
+
+      // Build tab bar from types present in library
+      const types = [...new Set(allFixtures.map(f => f.type).filter(Boolean))].sort();
+      const tabsEl = document.getElementById('lib-tabs');
+      tabsEl.innerHTML = ['', ...types].map(t =>
+        `<button class="lib-tab${activeTab === t ? ' active' : ''}" onclick="setTab('${t}')">${t || 'All'}</button>`
+      ).join('');
+
+      // Repopulate brand filter preserving selection
+      const brands = [...new Set(allFixtures.map(f => f.brand).filter(Boolean))].sort();
+      const brandEl = document.getElementById('brand-filter');
+      brandEl.innerHTML = '<option value="">All brands</option>' + brands.map(b => `<option ${b === brandF ? 'selected' : ''}>${b}</option>`).join('');
+
+      const filtered = allFixtures.filter(f => {
+        const matchQ = !q || [f.name, f.model, f.brand, f.notes].join(' ').toLowerCase().includes(q);
+        const matchT = !activeTab || f.type === activeTab;
+        const matchB = !brandF || f.brand === brandF;
+        return matchQ && matchT && matchB;
+      });
+
+      document.getElementById('count-label').textContent =
+        `${filtered.length} item${filtered.length !== 1 ? 's' : ''}` +
+        (allFixtures.length !== filtered.length ? ` (${allFixtures.length} total)` : '');
+
+      const grid = document.getElementById('fixture-grid');
+
+      if (allFixtures.length === 0) {
+        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">No fixtures yet</div>Add your first fixture to build your library.</div>`;
+        return;
+      }
+      if (filtered.length === 0) {
+        grid.innerHTML = `<div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">No matches</div>Try a different search or filter.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(f => `
       <div class="fixture-card">
         <div class="fc-top">
           <div>
@@ -217,10 +228,10 @@
           ${!activeTab ? `<div class="fc-type-badge">${esc(f.type || 'Other')}</div>` : ''}
         </div>
         <div class="fc-meta">
-          <div class="fc-stat"><div class="fc-stat-label">My cost</div><div class="fc-stat-val">${f.cost ? '$' + parseFloat(f.cost).toFixed(2) : '—'}</div></div>
-          <div class="fc-stat"><div class="fc-stat-label">Watts</div><div class="fc-stat-val">${f.watts ? f.watts + ' W' : '—'}</div></div>
-          ${f.cct     ? `<div class="fc-stat"><div class="fc-stat-label">CCT</div><div class="fc-stat-val" style="font-size:12px">${esc(f.cct)}</div></div>` : ''}
-          ${f.beam    ? `<div class="fc-stat"><div class="fc-stat-label">Beam</div><div class="fc-stat-val" style="font-size:12px">${esc(f.beam)}</div></div>` : ''}
+          <div class="fc-stat"><div class="fc-stat-label">Cost</div><div class="fc-stat-val">${f.cost ? '$' + parseFloat(f.cost).toFixed(2) : '—'}</div></div>
+          ${f.watts ? `<div class="fc-stat"><div class="fc-stat-label">Watts</div><div class="fc-stat-val">${f.watts} W</div></div>` : ''}
+          ${f.cct ? `<div class="fc-stat"><div class="fc-stat-label">CCT</div><div class="fc-stat-val" style="font-size:12px">${esc(f.cct)}</div></div>` : ''}
+          ${f.beam ? `<div class="fc-stat"><div class="fc-stat-label">Beam</div><div class="fc-stat-val" style="font-size:12px">${esc(f.beam)}</div></div>` : ''}
           ${f.wire_ft ? `<div class="fc-stat"><div class="fc-stat-label">Default wire</div><div class="fc-stat-val">${f.wire_ft} ft</div></div>` : ''}
         </div>
         ${f.notes ? `<div class="fc-notes">${esc(f.notes)}</div>` : ''}
@@ -230,186 +241,184 @@
         </div>
       </div>
     `).join('');
-  }
-
-
-  /* ── MODAL ──────────────────────────────────────────────────────────── */
-
-  function toggleIntegrated() {
-    const on = document.getElementById('f-integrated').checked;
-    document.getElementById('integrated-fields').style.display = on ? '' : 'none';
-  }
-
-  function openModal(id = null, presetCategory = null) {
-    editingId = id;
-    showError('');
-
-    if (id) {
-      const f = allFixtures.find(x => x.id === id);
-      if (!f) return;
-      document.getElementById('modal-title').textContent    = 'Edit fixture';
-      document.getElementById('f-name').value               = f.name    || '';
-      document.getElementById('f-brand').value              = f.brand   || '';
-      document.getElementById('f-model').value              = f.model   || '';
-      document.getElementById('f-type').value               = f.type    || 'Uplight';
-      document.getElementById('f-cost').value               = f.cost    ?? '';
-      document.getElementById('f-notes').value              = f.notes   || '';
-      document.getElementById('f-integrated').checked       = !!f.integrated;
-      document.getElementById('f-watts').value              = f.watts   ?? '';
-      document.getElementById('f-cct').value                = f.cct     || '';
-      document.getElementById('f-beam').value               = f.beam    || '';
-    } else {
-      const typeMap = { fixture: 'Uplight', wire: 'Wire', lamp: 'Lamp', transformer: 'Transformer', misc: 'Misc' };
-      const defaultType = typeMap[presetCategory] || 'Uplight';
-      const titleMap = { wire: 'Add wire', lamp: 'Add lamp', transformer: 'Add transformer', misc: 'Add misc material' };
-      document.getElementById('modal-title').textContent = titleMap[presetCategory] || 'Add fixture';
-      ['f-name','f-brand','f-model','f-cost','f-notes','f-watts','f-cct','f-beam']
-        .forEach(id => { document.getElementById(id).value = ''; });
-      document.getElementById('f-type').value         = defaultType;
-      document.getElementById('f-integrated').checked = false;
     }
 
-    toggleIntegrated();
-    document.getElementById('modal').classList.add('open');
-    setTimeout(() => document.getElementById('f-name').focus(), 50);
-  }
 
-  function closeModal() {
-    document.getElementById('modal').classList.remove('open');
-    editingId = null;
-  }
+    /* ── MODAL ──────────────────────────────────────────────────────────── */
 
-  function backdropClose(e) {
-    if (e.target === document.getElementById('modal')) closeModal();
-  }
-
-  async function saveFixture() {
-    const name = document.getElementById('f-name').value.trim();
-    if (!name) { document.getElementById('f-name').focus(); return; }
-
-    const integrated = document.getElementById('f-integrated').checked;
-    const fixture = {
-      name,
-      brand:      document.getElementById('f-brand').value.trim()  || null,
-      model:      document.getElementById('f-model').value.trim()  || null,
-      type:       document.getElementById('f-type').value,
-      cost:       parseFloat(document.getElementById('f-cost').value)  || null,
-      notes:      document.getElementById('f-notes').value.trim()  || null,
-      integrated,
-      watts:      integrated ? (parseFloat(document.getElementById('f-watts').value) || null) : null,
-      cct:        integrated ? document.getElementById('f-cct').value.trim()  || null : null,
-      beam:       integrated ? document.getElementById('f-beam').value.trim() || null : null,
-    };
-
-    setBusy(true);
-    showError('');
-
-    try {
-      const id      = editingId || uid();
-      const updated = await API.saveFixture(id, fixture);
-      // Coerce integrated back to boolean for local cache consistency
-      updated.integrated = !!updated.integrated;
-      const idx = allFixtures.findIndex(f => f.id === id);
-      if (idx >= 0) allFixtures[idx] = updated;
-      else          allFixtures.unshift(updated);
-      closeModal();
-      renderGrid();
-    } catch (err) {
-      showError('Save failed: ' + err.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-
-  /* ── DELETE ─────────────────────────────────────────────────────────── */
-
-  async function deleteFixture(id) {
-    const f = allFixtures.find(x => x.id === id);
-    if (!f || !confirm(`Delete "${f.name}"?`)) return;
-    try {
-      await API.deleteFixture(id);
-      allFixtures = allFixtures.filter(x => x.id !== id);
-      renderGrid();
-    } catch (err) {
-      alert('Delete failed: ' + err.message);
-    }
-  }
-
-
-  /* ── IMPORT / EXPORT ────────────────────────────────────────────────── */
-
-  function exportLibrary() {
-    const blob = new Blob([JSON.stringify(allFixtures, null, 2)], { type: 'application/json' });
-    const a    = Object.assign(document.createElement('a'), {
-      href:     URL.createObjectURL(blob),
-      download: 'radiant-fixtures.json',
-    });
-    a.click();
-  }
-
-  async function importLibrary(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const text = await file.text();
-    e.target.value = '';
-
-    let data;
-    try {
-      data = JSON.parse(text);
-      if (!Array.isArray(data)) throw new Error();
-    } catch {
-      alert('Import failed: invalid JSON file.');
-      return;
+    function toggleIntegrated() {
+      const on = document.getElementById('f-integrated').checked;
+      document.getElementById('integrated-fields').style.display = on ? '' : 'none';
     }
 
-    const existingIds = new Set(allFixtures.map(f => f.id));
-    const toImport    = data.filter(f => f.id && f.name && !existingIds.has(f.id));
-    let imported = 0;
+    function openModal(id = null, presetCategory = null) {
+      editingId = id;
+      showError('');
 
-    for (const f of toImport) {
+      if (id) {
+        const f = allFixtures.find(x => x.id === id);
+        if (!f) return;
+        document.getElementById('modal-title').textContent = 'Edit fixture';
+        document.getElementById('f-name').value = f.name || '';
+        document.getElementById('f-brand').value = f.brand || '';
+        document.getElementById('f-model').value = f.model || '';
+        document.getElementById('f-type').value = f.type || 'Uplight';
+        document.getElementById('f-cost').value = f.cost ?? '';
+        document.getElementById('f-notes').value = f.notes || '';
+        document.getElementById('f-integrated').checked = !!f.integrated;
+        document.getElementById('f-watts').value = f.watts ?? '';
+        document.getElementById('f-cct').value = f.cct || '';
+        document.getElementById('f-beam').value = f.beam || '';
+      } else {
+        const typeMap = { fixture: 'Uplight', wire: 'Wire', lamp: 'Lamp', transformer: 'Transformer', misc: 'Misc' };
+        const defaultType = typeMap[presetCategory] || 'Uplight';
+        const titleMap = { wire: 'Add wire', lamp: 'Add lamp', transformer: 'Add transformer', misc: 'Add misc material' };
+        document.getElementById('modal-title').textContent = titleMap[presetCategory] || 'Add fixture';
+        ['f-name', 'f-brand', 'f-model', 'f-cost', 'f-notes', 'f-watts', 'f-cct', 'f-beam']
+          .forEach(id => { document.getElementById(id).value = ''; });
+        document.getElementById('f-type').value = defaultType;
+        document.getElementById('f-integrated').checked = false;
+      }
+
+      toggleIntegrated();
+      document.getElementById('modal').classList.add('open');
+      setTimeout(() => document.getElementById('f-name').focus(), 50);
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+      editingId = null;
+    }
+
+
+    async function saveFixture() {
+      const name = document.getElementById('f-name').value.trim();
+      if (!name) { document.getElementById('f-name').focus(); return; }
+
+      const integrated = document.getElementById('f-integrated').checked;
+      const fixture = {
+        name,
+        brand: document.getElementById('f-brand').value.trim() || null,
+        model: document.getElementById('f-model').value.trim() || null,
+        type: document.getElementById('f-type').value,
+        cost: parseFloat(document.getElementById('f-cost').value) || null,
+        notes: document.getElementById('f-notes').value.trim() || null,
+        integrated,
+        watts: integrated ? (parseFloat(document.getElementById('f-watts').value) || null) : null,
+        cct: integrated ? document.getElementById('f-cct').value.trim() || null : null,
+        beam: integrated ? document.getElementById('f-beam').value.trim() || null : null,
+      };
+
+      setBusy(true);
+      showError('');
+
       try {
-        const saved = await API.saveFixture(f.id, f);
-        saved.integrated = !!saved.integrated;
-        allFixtures.unshift(saved);
-        imported++;
-      } catch { /* skip individual failures */ }
+        const id = editingId || uid();
+        const updated = await API.saveFixture(id, fixture);
+        // Coerce integrated back to boolean for local cache consistency
+        updated.integrated = !!updated.integrated;
+        const idx = allFixtures.findIndex(f => f.id === id);
+        if (idx >= 0) allFixtures[idx] = updated;
+        else allFixtures.unshift(updated);
+        closeModal();
+        renderGrid();
+      } catch (err) {
+        showError('Save failed: ' + err.message);
+      } finally {
+        setBusy(false);
+      }
     }
 
-    renderGrid();
-    alert(`Imported ${imported} new fixture(s). ${data.length - imported} skipped.`);
-  }
+
+    /* ── DELETE ─────────────────────────────────────────────────────────── */
+
+    async function deleteFixture(id) {
+      const f = allFixtures.find(x => x.id === id);
+      if (!f || !confirm(`Delete "${f.name}"?`)) return;
+      try {
+        await API.deleteFixture(id);
+        allFixtures = allFixtures.filter(x => x.id !== id);
+        renderGrid();
+      } catch (err) {
+        alert('Delete failed: ' + err.message);
+      }
+    }
 
 
-  /* ── INIT ───────────────────────────────────────────────────────────── */
+    /* ── IMPORT / EXPORT ────────────────────────────────────────────────── */
 
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    function exportLibrary() {
+      const blob = new Blob([JSON.stringify(allFixtures, null, 2)], { type: 'application/json' });
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(blob),
+        download: 'radiant-fixtures.json',
+      });
+      a.click();
+    }
 
-  API.getFixtures()
-    .then(data => {
-      allFixtures = data.map(f => ({ ...f, integrated: !!f.integrated }));
+    async function importLibrary(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const text = await file.text();
+      e.target.value = '';
+
+      let data;
+      try {
+        data = JSON.parse(text);
+        if (!Array.isArray(data)) throw new Error();
+      } catch {
+        alert('Import failed: invalid JSON file.');
+        return;
+      }
+
+      const existingIds = new Set(allFixtures.map(f => f.id));
+      const toImport = data.filter(f => f.id && f.name && !existingIds.has(f.id));
+      let imported = 0;
+
+      for (const f of toImport) {
+        try {
+          const saved = await API.saveFixture(f.id, f);
+          saved.integrated = !!saved.integrated;
+          allFixtures.unshift(saved);
+          imported++;
+        } catch { /* skip individual failures */ }
+      }
+
       renderGrid();
-    })
-    .catch(err => {
-      document.getElementById('fixture-grid').innerHTML =
-        `<div class="empty-state"><div class="empty-title">Could not load fixtures</div>${err.message}</div>`;
-    });
+      alert(`Imported ${imported} new fixture(s). ${data.length - imported} skipped.`);
+    }
 
-  /* ── THEME ──────────────────────────────────────────────────────────── */
 
-  function toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const next = isDark ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('rt-theme', next);
-    document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀' : '☾';
-  }
+    /* ── INIT ───────────────────────────────────────────────────────────── */
 
-  (function() {
-    const saved = localStorage.getItem('rt-theme');
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = saved === 'dark' ? '☀' : '☾';
-  })();
-</script>
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    API.getFixtures()
+      .then(data => {
+        allFixtures = data.map(f => ({ ...f, integrated: !!f.integrated }));
+        renderGrid();
+      })
+      .catch(err => {
+        document.getElementById('fixture-grid').innerHTML =
+          `<div class="empty-state"><div class="empty-title">Could not load fixtures</div>${err.message}</div>`;
+      });
+
+    /* ── THEME ──────────────────────────────────────────────────────────── */
+
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const next = isDark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next); http://localhost:3000/
+      localStorage.setItem('rt-theme', next); http://localhost:3000/
+      document.getElementById('theme-toggle').textContent = next === 'dark' ? '☀' : '☾';
+    }
+    http://localhost:3000/
+    (function () {
+      const saved = localStorage.getItem('rt-theme');
+      const btn = document.getElementById('theme-toggle');
+      if (btn) btn.textContent = saved === 'dark' ? '☀' : '☾';
+    })();
+  </script>
 </body>
+
 </html>

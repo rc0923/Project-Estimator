@@ -130,8 +130,10 @@
           <tr>
             <th class="col-name">Name</th>
             <th class="col-brand">Model</th>
-            <th class="col-rolls">Qty (Rolls)</th>
-            <th class="col-unit">Cost</th>
+            <th class="col-type"></th>
+            <th class="col-qty">Qty</th>
+            <th class="col-watts"></th>
+            <th class="col-unit">Unit cost</th>
             <th class="col-total">Line total</th>
             <th class="col-lib"></th>
             <th class="col-del"></th>
@@ -156,6 +158,7 @@
           <tr>
             <th class="col-name">Name</th>
             <th class="col-brand">Model</th>
+            <th class="col-type"></th>
             <th class="col-qty">Qty</th>
             <th class="col-watts">Watts</th>
             <th class="col-unit">Unit cost</th>
@@ -183,9 +186,12 @@
           <tr>
             <th class="col-name">Description</th>
             <th class="col-brand">Model #</th>
+            <th class="col-type"></th>
             <th class="col-qty">Qty</th>
+            <th class="col-watts"></th>
             <th class="col-unit">Unit cost</th>
             <th class="col-total">Line total</th>
+            <th class="col-lib"></th>
             <th class="col-del"></th>
           </tr>
         </thead>
@@ -208,8 +214,9 @@
           <tr>
             <th class="col-name">Name</th>
             <th class="col-brand">Model</th>
-            <th class="col-va">VA Rating</th>
+            <th class="col-type"></th>
             <th class="col-qty">Qty</th>
+            <th class="col-watts">VA Rating</th>
             <th class="col-unit">Unit cost</th>
             <th class="col-total">Line total</th>
             <th class="col-lib"></th>
@@ -282,10 +289,12 @@
       <div class="stat-block-val"  id="grand-total">$0</div>
       <div class="stat-block-sub"  id="per-fixture-cost">—</div>
     </div>
-    <div class="markup-note" id="margin-note"></div>
+    <div class="markup-note" id="margin-note" style="display:none"></div>
   </aside>
 
 </div>
+
+<div class="toast" id="toast"></div>
 
 <!-- ── MATERIALS LIST MODAL ──────────────────────────────────────────── -->
 <div class="modal-backdrop" id="materials-modal" onclick="if(event.target===this)closeMaterialsList()">
@@ -301,7 +310,8 @@
 
 <!-- ── LIBRARY PICKER MODAL ───────────────────────────────────────────── -->
 <div class="modal-backdrop" id="picker-modal" onclick="pickerBackdropClose(event)">
-  <div class="modal">
+  <div class="modal" style="position:relative">
+    <!-- Main picker view — untouched flex children -->
     <div class="modal-header">
       <span class="modal-title">Pick from library</span>
       <input class="modal-search" id="picker-search" type="text" placeholder="Search fixtures..." oninput="renderPicker()" />
@@ -312,6 +322,30 @@
     <div class="modal-footer-bar">
       <span id="picker-count-label"></span>
       <a href="/fixture-library.html" class="go-library-link">Manage library →</a>
+    </div>
+
+    <!-- Quantity step — absolutely overlays the picker, doesn't affect flex layout -->
+    <div id="picker-qty-step" class="picker-qty-overlay" style="display:none">
+      <div class="modal-header">
+        <button class="picker-back-btn" onclick="backToPicker()">← Back</button>
+        <span class="modal-title">Set quantity</span>
+        <button class="modal-close" onclick="closePicker()">✕</button>
+      </div>
+      <div class="picker-qty-body">
+        <div class="picker-qty-item">
+          <div class="picker-qty-name"  id="qty-item-name"></div>
+          <div class="picker-qty-model" id="qty-item-model"></div>
+        </div>
+        <div class="picker-qty-row">
+          <label class="picker-qty-label">Quantity</label>
+          <input class="picker-qty-input" id="picker-qty" type="number" min="1" step="1" value="1"
+                 onkeydown="if(event.key==='Enter') confirmPickWithQty()" />
+        </div>
+      </div>
+      <div class="modal-footer" style="padding:16px 24px">
+        <button class="btn-cancel" onclick="backToPicker()">Back</button>
+        <button class="btn-save"   onclick="confirmPickWithQty()">Add to estimate</button>
+      </div>
     </div>
   </div>
 </div>
@@ -341,10 +375,17 @@
   function fmt$(n)         { return '$' + Math.round(n).toLocaleString(); }
   function fmtD(n, d = 0)  { return n.toLocaleString(undefined, { minimumFractionDigits: d, maximumFractionDigits: d }); }
 
-  function setSaveState(busy, label) {
-    const btn = document.getElementById('btn-save');
-    btn.disabled    = busy;
-    btn.textContent = label || (busy ? 'Saving...' : 'Save');
+  function setSaveState(busy) {
+    document.getElementById('btn-save').disabled = busy;
+  }
+
+  let _toastTimer = null;
+  function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
   }
 
   let _autoSaveTimer  = null;
@@ -416,8 +457,10 @@
 
   function closePicker() {
     document.getElementById('picker-modal').classList.remove('open');
+    document.getElementById('picker-qty-step').style.display = 'none';
     _replaceMode      = false;
     _replaceTargetRow = null;
+    _pendingPickId    = null;
   }
 
   function pickerBackdropClose(e) {
@@ -430,13 +473,22 @@
     const q   = document.getElementById('picker-search').value.toLowerCase();
     const lib = libraryFixtures;
 
-    const types     = [...new Set(lib.map(f => f.type).filter(Boolean))].sort();
+    const lockedTypes   = ['Transformer', 'Wire', 'Lamp', 'Misc'];
+    const lockedTargets = ['transformer', 'wire', 'lamp', 'misc'];
     const filterBar = document.getElementById('picker-filter-bar');
-    filterBar.innerHTML = ['', ...types].map(t =>
-      `<div class="filter-chip ${pickerTypeFilter === t ? 'active' : ''}" onclick="setPickerFilter('${t}')">${t || 'All'}</div>`
-    ).join('');
+    if (lockedTargets.includes(pickerTarget)) {
+      filterBar.innerHTML = '';
+    } else {
+      const types = [...new Set(lib.map(f => f.type).filter(Boolean))]
+        .filter(t => !lockedTypes.includes(t))
+        .sort();
+      filterBar.innerHTML = ['', ...types].map(t =>
+        `<div class="filter-chip ${pickerTypeFilter === t ? 'active' : ''}" onclick="setPickerFilter('${t}')">${t || 'All'}</div>`
+      ).join('');
+    }
 
     let items = lib;
+    if (pickerTarget === 'fixture')     items = items.filter(f => !lockedTypes.includes(f.type));
     if (pickerTarget === 'transformer') items = items.filter(f => f.type === 'Transformer');
     if (pickerTarget === 'wire')        items = items.filter(f => f.type === 'Wire');
     if (pickerTarget === 'lamp')        items = items.filter(f => f.type === 'Lamp');
@@ -470,6 +522,8 @@
     `).join('');
   }
 
+  let _pendingPickId = null;
+
   function pickFixture(id) {
     const f = libraryFixtures.find(x => x.id === id);
     if (!f) return;
@@ -477,6 +531,7 @@
     const brandModel = [f.brand, f.model].filter(Boolean).join(' ');
 
     if (_replaceMode && _replaceTargetRow) {
+      // Replace mode: swap fields directly, no qty prompt needed
       const tr       = _replaceTargetRow;
       const setField = (field, val) => { const el = tr.querySelector(`[data-field=${field}]`); if (el) el.value = val; };
       setField('model',       label);
@@ -497,28 +552,52 @@
         if (f.watts) setField('va_rating', f.watts);
         if (f.cost)  setField('unit_cost', f.cost);
       }
+      recalc();
+      closePicker();
     } else {
-      if (pickerTarget === 'transformer') {
-        document.getElementById('xfmr-tbody').appendChild(
-          makeXfmrRow({ model: label, brand_model: brandModel, va_rating: f.watts || '', unit_cost: f.cost || '', qty: 1 })
-        );
-      } else if (pickerTarget === 'wire') {
-        document.getElementById('wire-tbody').appendChild(
-          makeWireRow({ model: label, brand_model: brandModel, unit_cost: f.cost || '' })
-        );
-      } else if (pickerTarget === 'lamp') {
-        document.getElementById('lamp-tbody').appendChild(
-          makeLampRow({ model: label, brand_model: brandModel, watts: f.watts || '', unit_cost: f.cost || '' })
-        );
-      } else if (pickerTarget === 'misc') {
-        document.getElementById('misc-tbody').appendChild(
-          makeMiscRow({ model: label, brand_model: brandModel, unit_cost: f.cost || '' })
-        );
-      } else {
-        document.getElementById('fixture-tbody').appendChild(
-          makeFixtureRow({ model: label, brand_model: brandModel, type: f.type || 'Uplight', qty: 1, watts: f.watts || '', unit_cost: f.cost || '' })
-        );
-      }
+      // New row: show quantity step
+      _pendingPickId = id;
+      document.getElementById('qty-item-name').textContent  = label;
+      document.getElementById('qty-item-model').textContent = brandModel !== label ? brandModel : '';
+      document.getElementById('picker-qty').value = 1;
+      document.getElementById('picker-qty-step').style.display = 'flex';
+      setTimeout(() => document.getElementById('picker-qty').select(), 50);
+    }
+  }
+
+  function backToPicker() {
+    _pendingPickId = null;
+    document.getElementById('picker-qty-step').style.display = 'none';
+    setTimeout(() => document.getElementById('picker-search').focus(), 50);
+  }
+
+  function confirmPickWithQty() {
+    const f = libraryFixtures.find(x => x.id === _pendingPickId);
+    if (!f) return closePicker();
+    const qty        = Math.max(1, parseInt(document.getElementById('picker-qty').value) || 1);
+    const label      = f.name || [f.brand, f.model].filter(Boolean).join(' ');
+    const brandModel = [f.brand, f.model].filter(Boolean).join(' ');
+
+    if (pickerTarget === 'transformer') {
+      document.getElementById('xfmr-tbody').appendChild(
+        makeXfmrRow({ model: label, brand_model: brandModel, va_rating: f.watts || '', unit_cost: f.cost || '', qty })
+      );
+    } else if (pickerTarget === 'wire') {
+      document.getElementById('wire-tbody').appendChild(
+        makeWireRow({ model: label, brand_model: brandModel, unit_cost: f.cost || '', qty })
+      );
+    } else if (pickerTarget === 'lamp') {
+      document.getElementById('lamp-tbody').appendChild(
+        makeLampRow({ model: label, brand_model: brandModel, watts: f.watts || '', unit_cost: f.cost || '', qty })
+      );
+    } else if (pickerTarget === 'misc') {
+      document.getElementById('misc-tbody').appendChild(
+        makeMiscRow({ model: label, brand_model: brandModel, unit_cost: f.cost || '', qty })
+      );
+    } else {
+      document.getElementById('fixture-tbody').appendChild(
+        makeFixtureRow({ model: label, brand_model: brandModel, type: f.type || 'Uplight', watts: f.watts || '', unit_cost: f.cost || '', qty })
+      );
     }
     recalc();
     closePicker();
@@ -559,7 +638,9 @@
     tr.innerHTML = `
       <td><input class="tbl-input"      data-field="model"       placeholder="Name"             value="${esc(data.model       || '')}" oninput="recalc()" /></td>
       <td><input class="tbl-input"      data-field="brand_model" placeholder="Brand / model"    value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td></td>
       <td><input class="tbl-input mono" data-field="qty"         type="number" min="0"           value="${data.qty        || ''}" placeholder="—"    oninput="recalc()" /></td>
+      <td></td>
       <td><input class="tbl-input mono" data-field="unit_cost" type="number" min="0" step="0.01" value="${data.unit_cost  || ''}" placeholder="—"    oninput="recalc()" /></td>
       <td class="row-total">—</td>
       <td><button class="lib-btn" title="Replace from library" onclick="replaceFromLib(this, 'wire')">lib</button></td>
@@ -573,6 +654,7 @@
     tr.innerHTML = `
       <td><input class="tbl-input"      data-field="model"       placeholder="Name"          value="${esc(data.model       || '')}" oninput="recalc()" /></td>
       <td><input class="tbl-input"      data-field="brand_model" placeholder="Brand / model" value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td></td>
       <td><input class="tbl-input mono" data-field="qty"         type="number" min="0"        value="${data.qty      || ''}" placeholder="—"    oninput="recalc()" /></td>
       <td><input class="tbl-input mono" data-field="watts"       type="number" min="0" step="0.5" value="${data.watts || ''}" placeholder="—"   oninput="recalc()" /></td>
       <td><input class="tbl-input mono" data-field="unit_cost"   type="number" min="0" step="0.01" value="${data.unit_cost || ''}" placeholder="—" oninput="recalc()" /></td>
@@ -588,9 +670,12 @@
     tr.innerHTML = `
       <td><input class="tbl-input"      data-field="model"       placeholder="Description"   value="${esc(data.model       || '')}" oninput="recalc()" /></td>
       <td><input class="tbl-input"      data-field="brand_model" placeholder="Model #"        value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
+      <td></td>
       <td><input class="tbl-input mono" data-field="qty"         type="number" min="0"         value="${data.qty      || ''}" placeholder="—" oninput="recalc()" /></td>
+      <td></td>
       <td><input class="tbl-input mono" data-field="unit_cost"   type="number" min="0" step="0.01" value="${data.unit_cost || ''}" placeholder="—" oninput="recalc()" /></td>
       <td class="row-total">—</td>
+      <td></td>
       <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
     `;
     return tr;
@@ -601,9 +686,10 @@
     tr.innerHTML = `
       <td><input class="tbl-input"      data-field="model"       placeholder="Name"             value="${esc(data.model       || '')}" oninput="recalc()" /></td>
       <td><input class="tbl-input"      data-field="brand_model" placeholder="Brand / model"    value="${esc(data.brand_model || '')}" oninput="recalc()" /></td>
-      <td><input class="tbl-input mono" data-field="va_rating"   type="number" min="0" step="50" value="${data.va_rating  || ''}" placeholder="VA"  oninput="recalc()" /></td>
-      <td><input class="tbl-input mono" data-field="qty"       type="number" min="0"                    value="${data.qty        || 1}"                        oninput="recalc()" /></td>
-      <td><input class="tbl-input mono" data-field="unit_cost" type="number" min="0" step="0.01"        value="${data.unit_cost  || ''}" placeholder="—"       oninput="recalc()" /></td>
+      <td></td>
+      <td><input class="tbl-input mono" data-field="qty"         type="number" min="0"           value="${data.qty        || 1}"                        oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="va_rating"   type="number" min="0" step="50" value="${data.va_rating  || ''}" placeholder="—"      oninput="recalc()" /></td>
+      <td><input class="tbl-input mono" data-field="unit_cost"   type="number" min="0" step="0.01" value="${data.unit_cost  || ''}" placeholder="—"     oninput="recalc()" /></td>
       <td class="row-total">—</td>
       <td><button class="lib-btn" title="Replace from library" onclick="replaceFromLib(this, 'transformer')">lib</button></td>
       <td><button class="del-btn" onclick="delRow(this)">✕</button></td>
@@ -742,9 +828,6 @@
     document.getElementById('grand-total').textContent   = fmt$(grandTotal);
     document.getElementById('per-fixture-cost').textContent = fixtureCount > 0
       ? `${fmt$(grandTotal / fixtureCount)} per fixture avg` : '—';
-    const margin = grandTotal > 0 ? ((grandTotal - matCost) / grandTotal * 100) : 0;
-    document.getElementById('margin-note').textContent =
-      `Gross margin: ${fmtD(margin, 1)}%  ·  Labor: ${fmtD(laborHrs, 1)} hrs`;
 
     scheduleAutoSave();
   }
@@ -796,9 +879,9 @@
     setSaveState(true);
     try {
       await API.saveEstimate(currentId, state);
-      // Refresh sidebar list
       allEstimates = await API.getEstimates();
       renderEstimateList();
+      showToast('Saved successfully');
     } catch (err) {
       alert('Save failed: ' + err.message);
     } finally {
