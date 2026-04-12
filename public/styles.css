@@ -1495,3 +1495,9 @@ textarea.form-input        { resize: vertical; min-height: 72px; line-height: 1.
 .filter-chip:hover .chip-rename-btn,
 .filter-chip.active .chip-rename-btn { opacity: 0.7; }
 .chip-rename-btn:hover { opacity: 1 !important; }
+
+/* Cost breakdown modal — expandable category rows */
+details[open] > summary .breakdown-chevron { transform: rotate(90deg); }
+details > summary::-webkit-details-marker { display: none; }
+details > summary { outline: none; }
+details > summary:hover span:first-child { opacity: .8; }
