@@ -878,9 +878,9 @@
 
   function showCostBreakdown() {
     const c = window._lastCalc || {};
-    const matTotal   = (c.matBilled || 0) + (c.salesTaxAmt || 0);  // matBilled = cost + markup; add tax for total materials share
-    const laborTotal = (c.laborBilled || 0);
     const subTotal   = (c.subAmt || 0);
+    const matTotal   = (c.matBilled || 0) + (c.salesTaxAmt || 0) + subTotal;  // sub markup distributed into materials, not shown separately
+    const laborTotal = (c.laborBilled || 0);
     const elecTotal  = (c.electricianAmt || 0);
     const grand      = c.grandTotal || 0;
 
@@ -915,13 +915,12 @@
 
     const matPct   = pct(matTotal);
     const laborPct = pct(laborTotal);
-    const subPct2  = pct(subTotal);
     const elecPct  = pct(elecTotal);
 
-    // Distribute markup + tax proportionally into each category so client never sees our margin
+    // Distribute markup, tax, and sub % proportionally into each category so client never sees our margin
     const matRaw = c.matCost || 0;
-    const matFinal = (c.matBilled || 0) + (c.salesTaxAmt || 0);
-    const sf = matRaw > 0 ? matFinal / matRaw : 1;  // scale factor: bakes markup+tax into item costs
+    const matFinal = matTotal;  // includes markup, tax, and sub markup
+    const sf = matRaw > 0 ? matFinal / matRaw : 1;  // scale factor: bakes markup+tax+sub into item costs
 
     const categories = [
       { label: 'Fixtures',     val: (c.fixtureCost || 0) * sf, items: c.fixtureItems || [], perUnit: true },
@@ -991,11 +990,10 @@
     }
     html += `</div>`;
 
-    if (subTotal > 0 || elecTotal > 0) {
+    if (elecTotal > 0) {
       html += `<div style="height:1px;background:var(--border)"></div>`;
       html += `<div style="display:flex;flex-direction:column;gap:6px">`;
-      if (subTotal  > 0) html += row('Subcontractor', subTotal);
-      if (elecTotal > 0) html += row('Electrician',   elecTotal);
+      html += row('Electrician', elecTotal);
       html += `</div>`;
     }
 
@@ -1004,7 +1002,7 @@
                <span>Total</span><span class="val">${fmt$(grand)}</span></div>`;
 
     html += `<div style="display:flex;flex-direction:column;gap:6px;margin-top:4px">
-               ${bar(matPct, laborPct, subPct2, elecPct)}</div>`;
+               ${bar(matPct, laborPct, 0, elecPct)}</div>`;
 
     document.getElementById('cost-breakdown-body').innerHTML = html;
     document.getElementById('cost-breakdown-modal').classList.add('open');
