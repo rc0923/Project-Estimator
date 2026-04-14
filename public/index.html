@@ -325,7 +325,10 @@
   <div class="modal" style="max-width:460px">
     <div class="modal-header">
       <span class="modal-title">Labor vs Materials Breakdown</span>
-      <button class="modal-close" onclick="closeCostBreakdown()">✕</button>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button id="breakdown-copy-btn" class="hdr-btn" style="padding:4px 10px;font-size:12px" onclick="copyCostBreakdown()">Copy</button>
+        <button class="modal-close" onclick="closeCostBreakdown()">✕</button>
+      </div>
     </div>
     <div id="cost-breakdown-body" style="padding:20px;display:flex;flex-direction:column;gap:12px;font-size:14px"></div>
   </div>
@@ -1010,6 +1013,73 @@
 
   function closeCostBreakdown() {
     document.getElementById('cost-breakdown-modal').classList.remove('open');
+  }
+
+  function copyCostBreakdown() {
+    const c = window._lastCalc || {};
+    const subTotal   = (c.subAmt || 0);
+    const matTotal   = (c.matBilled || 0) + (c.salesTaxAmt || 0) + subTotal;
+    const laborTotal = (c.laborBilled || 0);
+    const elecTotal  = (c.electricianAmt || 0);
+    const grand      = c.grandTotal || 0;
+    const pct = v => grand > 0 ? Math.round(v / grand * 100) : 0;
+
+    const matRaw = c.matCost || 0;
+    const sf = matRaw > 0 ? matTotal / matRaw : 1;
+
+    const categories = [
+      { label: 'Fixtures',     val: (c.fixtureCost || 0) * sf, items: c.fixtureItems || [], perUnit: true },
+      { label: 'Wire',         val: (c.wireCost    || 0) * sf, items: c.wireItems    || [], perUnit: false },
+      { label: 'Lamps',        val: (c.lampCost    || 0) * sf, items: c.lampItems    || [], perUnit: true },
+      { label: 'Misc',         val: (c.miscCost    || 0) * sf, items: c.miscItems    || [], perUnit: false },
+      { label: 'Transformers', val: (c.xfmrCost    || 0) * sf, items: c.xfmrItems   || [], perUnit: false },
+    ].filter(cat => cat.val > 0);
+
+    const col = (label, val, indent = '') => `${indent}${label.padEnd(24 - indent.length, ' ')}${fmt$(val)}`;
+
+    let lines = ['Labor vs Materials Breakdown', ''];
+    lines.push('MATERIALS');
+    categories.forEach(cat => {
+      lines.push(col(cat.label, cat.val, '  '));
+      cat.items.forEach(it => {
+        const scaledTotal = it.total * sf;
+        const scaledUnit  = it.uc * sf;
+        let desc = it.name;
+        if (it.qty > 0) desc += ` × ${it.qty}`;
+        if (cat.perUnit && it.qty > 0) desc += `  (${fmt$(scaledUnit)} ea)`;
+        lines.push(`    ${desc.padEnd(20)}${scaledTotal > 0 ? fmt$(scaledTotal) : '—'}`);
+      });
+    });
+    lines.push(col('Materials Total', matTotal, '  '));
+    lines.push('');
+
+    lines.push('LABOR');
+    if (c.laborHrs > 0) {
+      lines.push(col('Labor', laborTotal, '  '));
+      lines.push(`    ${c.laborHrs} hrs × ${fmt$(c.laborRate)}/hr`);
+    } else {
+      lines.push(col('Labor', laborTotal, '  '));
+    }
+    lines.push('');
+
+    if (elecTotal > 0) {
+      lines.push('ELECTRICIAN');
+      lines.push(col('Electrician', elecTotal, '  '));
+      lines.push('');
+    }
+
+    lines.push('─'.repeat(32));
+    lines.push(col('Total', grand));
+    lines.push('');
+    lines.push(`Materials ${pct(matTotal)}%  |  Labor ${pct(laborTotal)}%${elecTotal > 0 ? `  |  Electrician ${pct(elecTotal)}%` : ''}`);
+
+    const text = lines.join('\n');
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('breakdown-copy-btn');
+      const orig = btn.textContent;
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = orig; }, 1800);
+    });
   }
 
 
