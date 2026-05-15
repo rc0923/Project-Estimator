@@ -587,6 +587,8 @@
       document.getElementById('qty-item-model').textContent = brandModel !== label ? brandModel : '';
       document.getElementById('picker-qty').value = 1;
       document.getElementById('picker-qty-step').style.display = 'flex';
+      const modal = document.querySelector('#picker-modal .modal');
+      modal.style.minHeight = Math.max(modal.offsetHeight, 320) + 'px';
       setTimeout(() => document.getElementById('picker-qty').select(), 50);
     }
   }
@@ -594,6 +596,7 @@
   function backToPicker() {
     _pendingPickId = null;
     document.getElementById('picker-qty-step').style.display = 'none';
+    document.querySelector('#picker-modal .modal').style.minHeight = '';
     setTimeout(() => document.getElementById('picker-search').focus(), 50);
   }
 
