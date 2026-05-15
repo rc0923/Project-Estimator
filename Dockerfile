@@ -6,6 +6,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install build tools needed for native addons (better-sqlite3 requires python3 + make + g++)
+RUN apk add --no-cache python3 make g++
+
 # Copy package files and install production deps only
 COPY package.json ./
 RUN npm install --omit=dev
